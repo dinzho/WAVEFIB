@@ -528,6 +528,15 @@
       "fib_resist": 58.73005004583378,
       "current_price": 23.479999542236328,
       "added_at": "08-25"
+    },
+    {
+      "code": "0579.HK",
+      "wave_type": "第5浪 (尾聲)",
+      "trend": "盤整",
+      "fib_support": 1.9026565745146162,
+      "fib_resist": 3.0363433624599026,
+      "current_price": 1.6749999523162842,
+      "added_at": "08-25"
     }
   ],
   "positions": [
