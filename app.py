@@ -202,7 +202,7 @@ with tab1:
                 x=wave_x, y=wave_y, mode='markers+text',
                 marker=dict(size=15, color='yellow', symbol='star', line=dict(width=2, color='black')),
                 text=wave_text, textposition='top center',
-                name='Elliott Waves', textfont=dict(size=14, color='white', family='Arial Black')
+                name='Elliott Waves', textfont=dict(size=14, color='BLACK', family='Arial Black')
             ))
             st.success("✅ 偵測到符合鐵律的 1-2-3-4-5 推動浪結構！")
         else:
