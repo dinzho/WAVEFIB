@@ -546,6 +546,15 @@
       "fib_resist": 283.3325789589126,
       "current_price": 114.19999694824219,
       "added_at": "08-25"
+    },
+    {
+      "code": "3750.HK",
+      "wave_type": "調整浪 (ABC)",
+      "trend": "下降",
+      "fib_support": 548.5884617369343,
+      "fib_resist": 1187.3042703508763,
+      "current_price": 621.0,
+      "added_at": "08-25"
     }
   ],
   "positions": [
