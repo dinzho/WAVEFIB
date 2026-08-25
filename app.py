@@ -9,22 +9,92 @@ import os
 import numpy as np
 
 # ==========================================
-# CSS 樣式注入 (分頁加大 + 表格置中)
+# CSS 样式注入 (全面提升 UI 美感)
 # ==========================================
 st.markdown("""
 <style>
-/* 分頁加大 */
+/* 整体背景 */
+.stApp {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+}
+
+/* 分页加大 + 美化 */
+.stTabs [data-baseweb="tab-list"] {
+    gap: 8px;
+}
 .stTabs [data-baseweb="tab-list"] button {
     font-size: 18px !important;
     padding: 12px 24px !important;
     font-weight: 600 !important;
+    border-radius: 8px !important;
+    background: #1e293b !important;
+    border: 1px solid #334155 !important;
+    transition: all 0.3s ease !important;
+}
+.stTabs [data-baseweb="tab-list"] button:hover {
+    background: #334155 !important;
+    transform: translateY(-2px) !important;
+}
+.stTabs [aria-selected="true"] {
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6) !important;
+    border: none !important;
 }
 
-/* 表格數字置中 */
-[data-testid="stDataFrame"] th,
+/* 表格美化 */
+[data-testid="stDataFrame"] {
+    border-radius: 12px !important;
+    overflow: hidden !important;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3) !important;
+}
+[data-testid="stDataFrame"] th {
+    background: #1e293b !important;
+    color: #60a5fa !important;
+    font-weight: 600 !important;
+    text-align: center !important;
+    padding: 12px !important;
+    border-bottom: 2px solid #3b82f6 !important;
+}
 [data-testid="stDataFrame"] td {
     text-align: center !important;
-    vertical-align: middle !important;
+    padding: 10px !important;
+    border-bottom: 1px solid #334155 !important;
+}
+
+/* 卡片样式 */
+.metric-card {
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.9));
+    border-radius: 12px;
+    padding: 20px;
+    border: 1px solid #334155;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    transition: all 0.3s ease;
+}
+.metric-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 12px rgba(0, 0, 0, 0.4);
+    border-color: #3b82f6;
+}
+
+/* 按钮美化 */
+.stButton > button {
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    transition: all 0.3s ease !important;
+}
+.stButton > button:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Expander 美化 */
+.streamlit-expanderHeader {
+    background: #1e293b !important;
+    border-radius: 8px !important;
+    border: 1px solid #334155 !important;
+    padding: 12px !important;
+}
+.streamlit-expanderHeader:hover {
+    border-color: #3b82f6 !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -74,7 +144,7 @@ class GitHubSync:
                 return self._get_default_data()
             return self._get_default_data()
         except json.JSONDecodeError:
-            st.warning("️ 雲端數據格式錯誤，已自動重置為預設數據。")
+            st.warning("⚠️ 云端数据格式错误，已自动重置为预设数据。")
             default_data = self._get_default_data()
             self.save_data(default_data)
             return default_data
@@ -104,7 +174,7 @@ class GitHubSync:
                     pass
 
 # ==========================================
-# 2. 技術分析核心函數
+# 2. 技术分析核心函数
 # ==========================================
 def calculate_rsi(series, period=14):
     delta = series.diff()
@@ -168,7 +238,7 @@ def find_swings(df, threshold_pct=3.0):
 
 def identify_wave_pattern(swings, df=None):
     if not swings or len(swings) < 2: 
-        return "趨勢初期", "數據不足"
+        return "趋势初期", "数据不足"
     
     last_swings = swings[-5:] if len(swings) >= 5 else swings
     highs = [s['price'] for s in last_swings if s['type'] == 'high']
@@ -176,15 +246,15 @@ def identify_wave_pattern(swings, df=None):
     
     if len(highs) >= 2 and len(lows) >= 2:
         if highs[-1] > highs[-2] and lows[-1] > lows[-2]:
-            return "第 3 浪 (主升段)", "強勁上升趨勢"
+            return "第 3 浪 (主升段)", "强劲上升趋势"
         elif highs[-1] < highs[-2] and lows[-1] > lows[-2]:
-            return "第 5 浪 (尾聲)", "上升動能減弱"
+            return "第 5 浪 (尾声)", "上升动能减弱"
         elif highs[-1] > highs[-2] and lows[-1] < lows[-2]:
-            return "第 2/4 浪 (回調)", "回調階段"
+            return "第 2/4 浪 (回调)", "回调阶段"
         else:
-            return "調整浪 (ABC)", "盤整或下跌"
+            return "调整浪 (ABC)", "盘整或下跌"
     
-    return "趨勢初期", "等待信號"
+    return "趋势初期", "等待信号"
 
 def calculate_fib_zones(high, low):
     if high is None or low is None:
@@ -200,39 +270,39 @@ def calculate_fib_zones(high, low):
     
     return {
         "短期阻力": [high + diff * 0.382, high + diff * 0.618],
-        "長期阻力": [high + diff * 1.0, high + diff * 1.618],
-        "支撐位": [high - diff * 0.382, high - diff * 0.5, high - diff * 0.618],
-        "關鍵位": [low, high],
+        "长期阻力": [high + diff * 1.0, high + diff * 1.618],
+        "支撑位": [high - diff * 0.382, high - diff * 0.5, high - diff * 0.618],
+        "关键位": [low, high],
         "high": high,
         "low": low
     }
 
 def analyze_pattern(df):
-    if len(df) < 30: return "數據不足", "中性", "#9ca3af"
+    if len(df) < 30: return "数据不足", "中性", "#9ca3af"
     
     ma20 = df['Close'].rolling(window=20).mean().iloc[-1]
     ma50 = df['Close'].rolling(window=50).mean().iloc[-1] if len(df) >= 50 else ma20
     current_price = df['Close'].iloc[-1]
     
     if current_price > ma20 > ma50:
-        return "多頭排列", "MA20 > MA50，趨勢向上", "#22c55e"
+        return "多头排列", "MA20 > MA50，趋势向上", "#22c55e"
     elif current_price < ma20 < ma50:
-        return "空頭排列", "MA20 < MA50，趨勢向下", "#ef4444"
+        return "空头排列", "MA20 < MA50，趋势向下", "#ef4444"
     else:
-        return "均線糾纏", "均線交錯", "#eab308"
+        return "均线纠缠", "均线交错", "#eab308"
 
 def analyze_trend_color(trend_text):
-    """根據趨勢文字返回顏色"""
-    if "上升" in trend_text or "多頭" in trend_text:
-        return "#ef4444"  # 紅色
-    elif "下降" in trend_text or "空頭" in trend_text:
+    """根据趋势文字返回颜色"""
+    if "上升" in trend_text or "多头" in trend_text:
+        return "#ef4444"  # 红色
+    elif "下降" in trend_text or "空头" in trend_text:
         return "#000000"  # 黑色
     else:
-        return "#eab308"  # 黃色 (盤整)
+        return "#eab308"  # 黄色 (盘整)
 
 def analyze_volume_anomaly(df):
     if 'Volume' not in df.columns or len(df) < 20:
-        return "無數據", 1.0
+        return "无数据", 1.0
     
     current_vol = df['Volume'].iloc[-1]
     avg_vol = df['Volume'].rolling(window=20).mean().iloc[-1]
@@ -243,9 +313,9 @@ def analyze_volume_anomaly(df):
     ratio = current_vol / avg_vol
     
     if ratio > 2.0:
-        return "異常放量 🔥", ratio
+        return "异常放量 🔥", ratio
     elif ratio < 0.5:
-        return "異常縮量 ️", ratio
+        return "异常缩量 ❄️", ratio
     else:
         return "正常", ratio
 
@@ -255,26 +325,26 @@ def check_multi_tf_resonance(ticker, market):
         df_weekly = yf.download(ticker, period="2y", interval="1wk", progress=False)
         
         if df_daily.empty or df_weekly.empty:
-            return "無數據", "中性"
+            return "无数据", "中性"
             
         if isinstance(df_daily.columns, pd.MultiIndex): df_daily.columns = df_daily.columns.droplevel(1)
         if isinstance(df_weekly.columns, pd.MultiIndex): df_weekly.columns = df_weekly.columns.droplevel(1)
         
         daily_ma20 = df_daily['Close'].rolling(20).mean().iloc[-1]
-        daily_trend = "多頭" if df_daily['Close'].iloc[-1] > daily_ma20 else "空頭"
+        daily_trend = "多头" if df_daily['Close'].iloc[-1] > daily_ma20 else "空头"
         
         weekly_ma20 = df_weekly['Close'].rolling(20).mean().iloc[-1]
-        weekly_trend = "多頭" if df_weekly['Close'].iloc[-1] > weekly_ma20 else "空頭"
+        weekly_trend = "多头" if df_weekly['Close'].iloc[-1] > weekly_ma20 else "空头"
         
         if daily_trend == weekly_trend:
-            return f"共振確認 ✅ ({daily_trend})", f"日線與週線均為{daily_trend}"
+            return f"共振确认 ✅ ({daily_trend})", f"日线与周线均为{daily_trend}"
         else:
-            return "信號衝突 ⚠️", f"日線{daily_trend}，週線{weekly_trend}"
+            return "信号冲突 ⚠️", f"日线{daily_trend}，周线{weekly_trend}"
     except:
-        return "計算失敗", "中性"
+        return "计算失败", "中性"
 
 # ==========================================
-# 3. 數據獲取
+# 3. 数据获取
 # ==========================================
 @st.cache_data(ttl=120)
 def fetch_data(ticker, period="2y", interval="1d"):
@@ -289,53 +359,53 @@ def fetch_data(ticker, period="2y", interval="1d"):
     except: return None
 
 # ==========================================
-# 4. UI 主程式
+# 4. UI 主程序
 # ==========================================
-st.set_page_config(page_title="智能個股分析平台", layout="wide", page_icon="🌊")
+st.set_page_config(page_title="智能个股分析平台", layout="wide", page_icon="🌊")
 
 with st.sidebar:
-    st.title("⚙️ 系統設定")
+    st.title("️ 系统设定")
     
     st.markdown("### 🔑 GitHub 配置")
     github_token = st.text_input("GitHub Token", type="password", help="Settings > Developer settings > Personal access tokens")
-    github_repo = st.text_input("GitHub 倉庫", placeholder="username/repo", help="格式：你的用戶名/倉庫名")
+    github_repo = st.text_input("GitHub 仓库", placeholder="username/repo", help="格式：你的用户名/仓库名")
     
     if github_token and github_repo:
         sync = GitHubSync(token=github_token, repo_name=github_repo)
         if sync.is_configured:
-            st.success("✅ GitHub 同步已啟用")
+            st.success("✅ GitHub 同步已启用")
         else:
-            st.error("❌ 配置失敗")
+            st.error("❌ 配置失败")
     else:
         sync = GitHubSync()
         if sync.is_configured:
-            st.success("✅ 使用環境變量配置")
+            st.success("✅ 使用环境变量配置")
         else:
-            st.warning("️ 未配置 GitHub，數據僅暫存")
+            st.warning("⚠️ 未配置 GitHub，数据仅暂存")
     
     st.markdown("---")
-    st.title("🔍 股票查詢")
-    search_code = st.text_input("股票代碼", "NVDA").upper()
-    market = st.selectbox("市場", ["US", "HK"])
+    st.title("🔍 股票查询")
+    search_code = st.text_input("股票代码", "NVDA").upper()
+    market = st.selectbox("市场", ["US", "HK"])
     ticker = f"{search_code}.HK" if market == "HK" else search_code
     
     st.markdown("---")
-    st.title("⚙️ 分析參數")
-    threshold = st.slider("波段值 (%)", 0.5, 15.0, 3.0, 0.5, help="小時線建議 1-2%，日線建議 3-5%")
-    tf_large = st.selectbox("大級別", ["週線", "月線", "日線"])
-    tf_small = st.selectbox("小級別", ["日線", "小時線", "週線"])
+    st.title("⚙️ 分析参数")
+    threshold = st.slider("波段值 (%)", 0.5, 15.0, 3.0, 0.5, help="小时线建议 1-2%，日线建议 3-5%")
+    tf_large = st.selectbox("大级别", ["周线", "月线", "日线"])
+    tf_small = st.selectbox("小级别", ["日线", "小时线", "周线"])
 
-st.title("🌊 智能個股分析平台 - 波浪理論專業版")
+st.title("🌊 智能个股分析平台 - 波浪理论专业版")
 
 data = sync.load_data()
-period_map = {"月線": "5y", "週線": "2y", "日線": "1y", "小時線": "3mo"}
-interval_map = {"月線": "1mo", "週線": "1wk", "日線": "1d", "小時線": "1h"}
+period_map = {"月线": "5y", "周线": "2y", "日线": "1y", "小时线": "3mo"}
+interval_map = {"月线": "1mo", "周线": "1wk", "日线": "1d", "小时线": "1h"}
 
 df_large = fetch_data(ticker, period_map[tf_large], interval_map[tf_large])
 df_small = fetch_data(ticker, period_map[tf_small], interval_map[tf_small])
 
 if df_large is None or df_small is None:
-    st.error("無法獲取數據，請檢查代碼或嘗試切換時間框架。")
+    st.error("无法获取数据，请检查代码或尝试切换时间框架。")
     st.stop()
 
 current_price = df_small['Close'].iloc[-1]
@@ -345,76 +415,76 @@ change_pct = (change / prev_close) * 100
 
 col1, col2, col3, col4 = st.columns(4)
 with col1:
-    st.metric("當前價格", f"{current_price:.2f}", f"{change:+.2f} ({change_pct:+.2f}%)")
+    st.metric("当前价格", f"{current_price:.2f}", f"{change:+.2f} ({change_pct:+.2f}%)")
 with col2:
     rsi = calculate_rsi(df_small['Close']).iloc[-1]
-    st.metric("RSI (14)", f"{rsi:.1f}", "超買" if rsi > 70 else "超賣" if rsi < 30 else "中性")
+    st.metric("RSI (14)", f"{rsi:.1f}", "超买" if rsi > 70 else "超卖" if rsi < 30 else "中性")
 with col3:
     macd, _, _ = calculate_macd(df_small)
-    st.metric("MACD", f"{macd.iloc[-1]:.2f}", "多頭" if macd.iloc[-1] > 0 else "空頭")
+    st.metric("MACD", f"{macd.iloc[-1]:.2f}", "多头" if macd.iloc[-1] > 0 else "空头")
 with col4:
     if 'Volume' in df_small.columns:
         vol_ma = df_small['Volume'].rolling(20).mean().iloc[-1]
         vol_ratio = df_small['Volume'].iloc[-1] / vol_ma if vol_ma > 0 else 1
         st.metric("成交量比", f"{vol_ratio:.2f}x", "放量" if vol_ratio > 1.5 else "正常")
     else:
-        st.metric("成交量", "無數據")
+        st.metric("成交量", "无数据")
 
 high_price, low_price, swings = find_swings(df_small, threshold)
 wave_type, wave_desc = identify_wave_pattern(swings, df_small)
 pattern, pattern_desc, pattern_color = analyze_pattern(df_small)
 fib_zones = calculate_fib_zones(high_price, low_price)
 
-tab1, tab2, tab3, tab4 = st.tabs(["📊 共振分析儀表板", "👁️ 觀察清單 (Excel)", "💼 模擬持倉 (Excel)", "📅 每日持倉日報 (Statement)"])
+tab1, tab2, tab3, tab4 = st.tabs(["📊 共振分析仪表板", "👁️ 观察清单 (Excel)", "💼 模拟持仓 (Excel)", " 每日持仓日报 (Statement)"])
 
 with tab1:
-    st.markdown("### 📐 道氏理論與波浪分析")
+    st.markdown("### 📐 道氏理论与波浪分析")
     col_dow1, col_dow2 = st.columns(2)
     with col_dow1:
         st.markdown(f"""<div style="padding: 15px; border-radius: 10px; background: linear-gradient(135deg, rgba(59,130,246,0.15), rgba(147,51,234,0.1)); border: 2px solid rgba(59,130,246,0.4);">
-            <h3 style="color: #60a5fa; margin: 0 0 10px 0;">📊 趨勢方向</h3>
+            <h3 style="color: #60a5fa; margin: 0 0 10px 0;">📊 趋势方向</h3>
             <p style="font-size: 22px; font-weight: bold; color: #60a5fa; margin: 10px 0;">{wave_type}</p>
             <p style="color: #9ca3af; margin: 0; font-size: 13px;">{wave_desc}</p></div>""", unsafe_allow_html=True)
     with col_dow2:
         st.markdown(f"""<div style="padding: 15px; border-radius: 10px; background: linear-gradient(135deg, rgba(34,197,94,0.15), rgba(168,85,247,0.1)); border: 2px solid rgba(34,197,94,0.4);">
-            <h3 style="color: #22c55e; margin: 0 0 10px 0;">🎯 形態分析</h3>
+            <h3 style="color: #22c55e; margin: 0 0 10px 0;">🎯 形态分析</h3>
             <p style="font-size: 22px; font-weight: bold; color: {pattern_color}; margin: 10px 0;">{pattern}</p>
             <p style="color: #9ca3af; margin: 0; font-size: 13px;">{pattern_desc}</p></div>""", unsafe_allow_html=True)
     
-    st.markdown("###  斐波那契區間")
+    st.markdown("### 📐 斐波那契区间")
     col_fib1, col_fib2, col_fib3 = st.columns(3)
     
     with col_fib1:
         st.markdown("""<div style="background: linear-gradient(135deg, rgba(239,68,68,0.1), rgba(239,68,68,0.05)); padding: 8px; border-radius: 6px; border-left: 3px solid #ef4444;">
             <h4 style="color: #ef4444; margin: 0 0 5px 0; font-size: 14px;">📈 阻力位</h4>
         </div>""", unsafe_allow_html=True)
-        st.metric("1.618 延伸", f"{fib_zones['長期阻力'][1]:.2f}")
-        st.metric("1.000 等長", f"{fib_zones['長期阻力'][0]:.2f}")
+        st.metric("1.618 延伸", f"{fib_zones['长期阻力'][1]:.2f}")
+        st.metric("1.000 等长", f"{fib_zones['长期阻力'][0]:.2f}")
         st.metric("0.618 阻力", f"{fib_zones['短期阻力'][1]:.2f}")
         st.metric("0.382 阻力", f"{fib_zones['短期阻力'][0]:.2f}")
     
     with col_fib2:
         st.markdown("""<div style="background: linear-gradient(135deg, rgba(34,197,94,0.1), rgba(34,197,94,0.05)); padding: 8px; border-radius: 6px; border-left: 3px solid #22c55e;">
-            <h4 style="color: #22c55e; margin: 0 0 5px 0; font-size: 14px;">📉 支撐位</h4>
+            <h4 style="color: #22c55e; margin: 0 0 5px 0; font-size: 14px;">📉 支撑位</h4>
         </div>""", unsafe_allow_html=True)
-        st.metric("38.2% 支撐", f"{fib_zones['支撐位'][0]:.2f}")
-        st.metric("50.0% 中軸", f"{fib_zones['支撐位'][1]:.2f}")
-        st.metric("61.8% 強支撐", f"{fib_zones['支撐位'][2]:.2f}")
+        st.metric("38.2% 支撑", f"{fib_zones['支撑位'][0]:.2f}")
+        st.metric("50.0% 中轴", f"{fib_zones['支撑位'][1]:.2f}")
+        st.metric("61.8% 强支撑", f"{fib_zones['支撑位'][2]:.2f}")
     
     with col_fib3:
         st.markdown("""<div style="background: linear-gradient(135deg, rgba(234,179,8,0.1), rgba(234,179,8,0.05)); padding: 8px; border-radius: 6px; border-left: 3px solid #eab308;">
-            <h4 style="color: #eab308; margin: 0 0 5px 0; font-size: 14px;"> 關鍵位</h4>
+            <h4 style="color: #eab308; margin: 0 0 5px 0; font-size: 14px;">🎯 关键位</h4>
         </div>""", unsafe_allow_html=True)
-        st.metric("波段高點", f"{fib_zones['關鍵位'][1]:.2f}")
-        st.metric("波段低點", f"{fib_zones['關鍵位'][0]:.2f}")
-        st.metric("波動幅度", f"{fib_zones['high'] - fib_zones['low']:.2f}")
+        st.metric("波段高点", f"{fib_zones['关键位'][1]:.2f}")
+        st.metric("波段低点", f"{fib_zones['关键位'][0]:.2f}")
+        st.metric("波动幅度", f"{fib_zones['high'] - fib_zones['low']:.2f}")
     
-    st.markdown("### 📊 多時間框架圖表")
+    st.markdown("### 📊 多时间框架图表")
     fig = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.03, row_heights=[0.7, 0.3])
     
     fig.add_trace(go.Candlestick(
         x=df_small['Date'], open=df_small['Open'], high=df_small['High'],
-        low=df_small['Low'], close=df_small['Close'], name='K 線',
+        low=df_small['Low'], close=df_small['Close'], name='K 线',
         increasing_line_color='#22c55e', decreasing_line_color='#ef4444'
     ), row=1, col=1)
     
@@ -438,11 +508,11 @@ with tab1:
             name='Swing Low'
         ), row=1, col=1)
     
-    for i, price in enumerate(fib_zones['支撐位']):
+    for i, price in enumerate(fib_zones['支撑位']):
         if price > 0:
             fig.add_hline(y=price, line_dash="dash", line_color="#22c55e", 
-                         opacity=0.5, annotation_text=f"支撐{i+1}", row=1, col=1)
-    for price in fib_zones['短期阻力'] + fib_zones['長期阻力']:
+                         opacity=0.5, annotation_text=f"支撑{i+1}", row=1, col=1)
+    for price in fib_zones['短期阻力'] + fib_zones['长期阻力']:
         if price > 0:
             fig.add_hline(y=price, line_dash="dash", line_color="#ef4444", 
                          opacity=0.5, row=1, col=1)
@@ -463,18 +533,18 @@ with tab1:
     st.plotly_chart(fig, use_container_width=True)
 
 # ==========================================
-# Tab 2: 觀察清單 (修復：自動升級舊數據結構)
+# Tab 2: 观察清单 (修复：自动升级旧数据结构)
 # ==========================================
 with tab2:
-    st.title("️ 觀察清單 (Excel 風格)")
+    st.title("👁️ 观察清单 (Excel 风格)")
     
-    with st.expander("➕ 新增股票到觀察清單", expanded=False):
+    with st.expander("➕ 新增股票到观察清单", expanded=False):
         with st.form("add_stock", clear_on_submit=True):
             col1, col2 = st.columns([3, 1])
             with col1: 
-                new_code = st.text_input("輸入股票代碼", placeholder="例如：AAPL, 0700", key="watch_code").upper()
+                new_code = st.text_input("输入股票代码", placeholder="例如：AAPL, 0700", key="watch_code").upper()
             with col2:
-                submit_btn = st.form_submit_button("➕ 加入清單", use_container_width=True)
+                submit_btn = st.form_submit_button("➕ 加入清单", use_container_width=True)
             
             if submit_btn and new_code:
                 if not any(w['code'] == new_code for w in data['watchlist']):
@@ -488,56 +558,58 @@ with tab2:
                         
                         if "第 3 浪" in w_type:
                             trend = "上升"
-                        elif "調整浪" in w_type or "第 5 浪" in w_type:
+                        elif "调整浪" in w_type or "第 5 浪" in w_type:
                             trend = "下降"
                         else:
-                            trend = "盤整"
+                            trend = "盘整"
                         
                         data['watchlist'].append({
                             "code": new_code,
                             "wave_type": w_type,
                             "trend": trend,
-                            "fib_support": fib['支撐位'][2],
+                            "fib_support": fib['支撑位'][2],
                             "short_resist": fib['短期阻力'][1],
-                            "long_resist": fib['長期阻力'][1],
+                            "long_resist": fib['长期阻力'][1],
                             "current_price": new_df['Close'].iloc[-1]
                         })
                         sync.save_data(data)
                         st.success(f"✅ 已加入 {new_code}")
                         st.rerun()
                     else:
-                        st.error("❌ 無法獲取數據")
+                        st.error("❌ 无法获取数据")
                 else:
-                    st.warning(f"⚠️ {new_code} 已在清單中")
+                    st.warning(f"⚠️ {new_code} 已在清单中")
 
     if data['watchlist']:
-        st.markdown(f"### 📋 已追蹤 {len(data['watchlist'])} 支股票")
+        st.markdown(f"### 📋 已追踪 {len(data['watchlist'])} 支股票")
         
-        # 【核心修復】自動升級舊版數據結構，防止 KeyError
+        # 【核心修复】自动升级旧版数据结构，防止 KeyError
         for item in data['watchlist']:
-            if 'short_resist' not in item:
-                old_resist = item.get('fib_resist', item.get('current_price', 0) * 1.05)
-                item['short_resist'] = old_resist
-                item['long_resist'] = old_resist * 1.05
+            # 如果是旧数据，重新计算正确的阻力位
+            if 'short_resist' not in item or 'long_resist' not in item:
+                current = item.get('current_price', 100)
+                # 使用当前价格的合理百分比作为阻力位
+                item['short_resist'] = current * 1.05
+                item['long_resist'] = current * 1.10
             if 'trend' not in item:
-                item['trend'] = "盤整"
+                item['trend'] = "盘整"
             if 'wave_type' not in item:
                 item['wave_type'] = "未知"
             if 'fib_support' not in item:
                 item['fib_support'] = item.get('current_price', 0) * 0.95
 
-        # 使用 HTML 表格實現完全控制 (顏色 + 置中)
+        # 使用 HTML 表格实现完全控制 (颜色 + 置中)
         html_table = """
-        <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 14px; border-radius: 8px; overflow: hidden;">
             <thead>
-                <tr style="background: #1e293b; color: white;">
-                    <th style="padding: 10px; text-align: center; border: 1px solid #334155;">代碼</th>
-                    <th style="padding: 10px; text-align: center; border: 1px solid #334155;">浪型</th>
-                    <th style="padding: 10px; text-align: center; border: 1px solid #334155;">趨勢</th>
-                    <th style="padding: 10px; text-align: center; border: 1px solid #334155;">現價</th>
-                    <th style="padding: 10px; text-align: center; border: 1px solid #334155;">支撐位</th>
-                    <th style="padding: 10px; text-align: center; border: 1px solid #334155;">短期阻力</th>
-                    <th style="padding: 10px; text-align: center; border: 1px solid #334155;">長期阻力</th>
+                <tr style="background: linear-gradient(135deg, #1e293b, #334155); color: #60a5fa;">
+                    <th style="padding: 12px; text-align: center; border: 1px solid #475569;">代码</th>
+                    <th style="padding: 12px; text-align: center; border: 1px solid #475569;">浪型</th>
+                    <th style="padding: 12px; text-align: center; border: 1px solid #475569;">趋势</th>
+                    <th style="padding: 12px; text-align: center; border: 1px solid #475569;">现价</th>
+                    <th style="padding: 12px; text-align: center; border: 1px solid #475569;">支撑位</th>
+                    <th style="padding: 12px; text-align: center; border: 1px solid #475569;">短期阻力</th>
+                    <th style="padding: 12px; text-align: center; border: 1px solid #475569;">长期阻力</th>
                 </tr>
             </thead>
             <tbody>
@@ -546,14 +618,14 @@ with tab2:
         for item in data['watchlist']:
             trend_color = analyze_trend_color(item['trend'])
             html_table += f"""
-                <tr style="background: #0f172a;">
-                    <td style="padding: 8px; text-align: center; border: 1px solid #334155; font-weight: bold;">{item['code']}</td>
-                    <td style="padding: 8px; text-align: center; border: 1px solid #334155;">{item['wave_type']}</td>
-                    <td style="padding: 8px; text-align: center; border: 1px solid #334155; color: {trend_color}; font-weight: bold;">{item['trend']}</td>
-                    <td style="padding: 8px; text-align: center; border: 1px solid #334155;">${item['current_price']:.2f}</td>
-                    <td style="padding: 8px; text-align: center; border: 1px solid #334155;">${item['fib_support']:.2f}</td>
-                    <td style="padding: 8px; text-align: center; border: 1px solid #334155;">${item['short_resist']:.2f}</td>
-                    <td style="padding: 8px; text-align: center; border: 1px solid #334155;">${item['long_resist']:.2f}</td>
+                <tr style="background: #0f172a; transition: all 0.2s;">
+                    <td style="padding: 10px; text-align: center; border: 1px solid #334155; font-weight: bold; color: #60a5fa;">{item['code']}</td>
+                    <td style="padding: 10px; text-align: center; border: 1px solid #334155;">{item['wave_type']}</td>
+                    <td style="padding: 10px; text-align: center; border: 1px solid #334155; color: {trend_color}; font-weight: bold;">{item['trend']}</td>
+                    <td style="padding: 10px; text-align: center; border: 1px solid #334155; color: #22c55e;">${item['current_price']:.2f}</td>
+                    <td style="padding: 10px; text-align: center; border: 1px solid #334155; color: #ef4444;">${item['fib_support']:.2f}</td>
+                    <td style="padding: 10px; text-align: center; border: 1px solid #334155; color: #f97316;">${item['short_resist']:.2f}</td>
+                    <td style="padding: 10px; text-align: center; border: 1px solid #334155; color: #eab308;">${item['long_resist']:.2f}</td>
                 </tr>
             """
         
@@ -561,7 +633,7 @@ with tab2:
         st.markdown(html_table, unsafe_allow_html=True)
         
         st.markdown("---")
-        st.markdown("### 🗑️ 管理清單 (刪除股票)")
+        st.markdown("### 🗑️ 管理清单 (删除股票)")
         
         if len(data['watchlist']) > 0:
             cols = st.columns(min(6, len(data['watchlist'])))
@@ -572,27 +644,27 @@ with tab2:
                         sync.save_data(data)
                         st.rerun()
     else:
-        st.info("📭 觀察清單為空")
+        st.info("📭 观察清单为空")
 
 # ==========================================
-# Tab 3: 模擬持倉 (Excel 風格)
+# Tab 3: 模拟持仓 (Excel 风格)
 # ==========================================
 with tab3:
-    st.title("💼 模擬持倉管理")
+    st.title("💼 模拟持仓管理")
     
-    with st.expander("➕ 新增持倉", expanded=False):
+    with st.expander("➕ 新增持仓", expanded=False):
         with st.form("add_position", clear_on_submit=True):
             col1, col2, col3, col4 = st.columns(4)
             with col1:
-                pos_code = st.text_input("代碼", placeholder="NVDA", key="pos_code_input").upper()
+                pos_code = st.text_input("代码", placeholder="NVDA", key="pos_code_input").upper()
             with col2:
-                pos_entry = st.number_input("買入價", min_value=0.01, step=0.01, key="pos_entry_input")
+                pos_entry = st.number_input("买入价", min_value=0.01, step=0.01, key="pos_entry_input")
             with col3:
-                pos_qty = st.number_input("數量", min_value=1, value=100, key="pos_qty_input")
+                pos_qty = st.number_input("数量", min_value=1, value=100, key="pos_qty_input")
             with col4:
                 pos_dir = st.selectbox("方向", ["做多", "做空"], key="pos_dir_input")
             
-            submit_pos = st.form_submit_button("💼 記錄持倉", use_container_width=True, type="primary")
+            submit_pos = st.form_submit_button(" 记录持仓", use_container_width=True, type="primary")
             
             if submit_pos and pos_code and pos_entry > 0:
                 pos_ticker = f"{pos_code}.HK" if market == "HK" else pos_code
@@ -620,10 +692,10 @@ with tab3:
                         "added_at": pd.Timestamp.now().strftime("%Y-%m-%d %H:%M")
                     })
                     sync.save_data(data)
-                    st.success(f"✅ 已記錄 {pos_code} 持倉")
+                    st.success(f"✅ 已记录 {pos_code} 持仓")
                     st.rerun()
                 else:
-                    st.error("❌ 無法獲取數據")
+                    st.error("❌ 无法获取数据")
 
     if data['positions']:
         table_data = []
@@ -657,23 +729,23 @@ with tab3:
             total_cost += p['entry'] * p['qty']
             
             table_data.append({
-                "代碼": p['code'],
+                "代码": p['code'],
                 "方向": p['dir'],
-                "買入價": p['entry'],
-                "數量": p['qty'],
-                "現價": current,
-                "盈虧": pnl,
-                "回報率%": pnl_pct,
-                "止損位": p.get('stop_loss', 0),
-                "移動止損": p.get('trailing_stop', 0)
+                "买入价": p['entry'],
+                "数量": p['qty'],
+                "现价": current,
+                "盈亏": pnl,
+                "回报率%": pnl_pct,
+                "止损位": p.get('stop_loss', 0),
+                "移动止损": p.get('trailing_stop', 0)
             })
         
         col_t1, col_t2 = st.columns(2)
         with col_t1:
-            st.metric("💰 總持倉成本", f"${total_cost:,.2f}")
+            st.metric("💰 总持仓成本", f"${total_cost:,.2f}")
         with col_t2:
             color = "normal" if total_pnl >= 0 else "inverse"
-            st.metric("📈 總模擬盈虧", f"${total_pnl:+,.2f}", f"{total_pnl:+,.2f}", delta_color=color)
+            st.metric(" 总模拟盈亏", f"${total_pnl:+,.2f}", f"{total_pnl:+,.2f}", delta_color=color)
         
         st.markdown("---")
         
@@ -682,12 +754,12 @@ with tab3:
         st.dataframe(
             df_positions,
             column_config={
-                "買入價": st.column_config.NumberColumn(format="$%.2f"),
-                "現價": st.column_config.NumberColumn(format="$%.2f"),
-                "盈虧": st.column_config.NumberColumn(format="$%+,.2f"),
-                "回報率%": st.column_config.NumberColumn(format="%+.2f%%"),
-                "止損位": st.column_config.NumberColumn(format="$%.2f"),
-                "移動止損": st.column_config.NumberColumn(format="$%.2f"),
+                "买入价": st.column_config.NumberColumn(format="$%.2f"),
+                "现价": st.column_config.NumberColumn(format="$%.2f"),
+                "盈亏": st.column_config.NumberColumn(format="$%+,.2f"),
+                "回报率%": st.column_config.NumberColumn(format="%+.2f%%"),
+                "止损位": st.column_config.NumberColumn(format="$%.2f"),
+                "移动止损": st.column_config.NumberColumn(format="$%.2f"),
             },
             use_container_width=True,
             hide_index=True,
@@ -695,7 +767,7 @@ with tab3:
         )
         
         st.markdown("---")
-        st.markdown("### 🔄 持倉操作 (平倉)")
+        st.markdown("### 🔄 持仓操作 (平仓)")
         
         if len(data['positions']) > 0:
             cols = st.columns(min(6, len(data['positions'])))
@@ -703,7 +775,7 @@ with tab3:
                 pnl = (p.get('current', p['entry']) - p['entry']) * p['qty'] if p['dir'] == "做多" else (p['entry'] - p.get('current', p['entry'])) * p['qty']
                 btn_type = "primary" if pnl >= 0 else "secondary"
                 with cols[i % len(cols)]:
-                    if st.button(f"平倉 {p['code']}", key=f"close_{i}", use_container_width=True, type=btn_type):
+                    if st.button(f"平仓 {p['code']}", key=f"close_{i}", use_container_width=True, type=btn_type):
                         closed_p = p.copy()
                         closed_p['close_price'] = p.get('current', p['entry'])
                         closed_p['close_pnl'] = pnl
@@ -714,40 +786,56 @@ with tab3:
                         sync.save_data(data)
                         st.rerun()
     else:
-        st.info("💭 尚無持倉記錄")
+        st.info("💭 尚无持仓记录")
 
 # ==========================================
-# Tab 4: 每日持倉日報 (Statement 風格)
+# Tab 4: 每日持仓日报 (专业 Statement 风格 - 全面美化)
 # ==========================================
 with tab4:
-    st.title(" 每日持倉日報 (Account Statement)")
+    st.title("📅 每日持仓日报 (Account Statement)")
     
-    if st.button("🔄 生成今日持倉日報", type="primary", use_container_width=True):
+    if st.button("🔄 生成今日持仓日报", type="primary", use_container_width=True):
         if not data['positions'] and not data['closed_positions']:
-            st.warning("⚠️ 尚無持倉或平倉記錄。")
+            st.warning("⚠️ 尚无持仓或平仓记录。")
         else:
             st.markdown("---")
-            st.markdown(f"### 📊 日報生成時間：{pd.Timestamp.now().strftime('%Y-%m-%d %H:%M')}")
+            st.markdown(f"""
+            <div style="background: linear-gradient(135deg, rgba(59,130,246,0.1), rgba(147,51,234,0.1)); 
+                        padding: 20px; border-radius: 12px; border: 2px solid #3b82f6; margin-bottom: 20px;">
+                <h2 style="color: #60a5fa; margin: 0; text-align: center;">📊 日报生成时间：{pd.Timestamp.now().strftime('%Y-%m-%d %H:%M')}</h2>
+            </div>
+            """, unsafe_allow_html=True)
             st.markdown("---")
             
-            # 1. 帳戶概覽
-            st.markdown("#### 1️ 帳戶概覽")
+            # 1. 帐户概览
+            st.markdown("#### 1️⃣ 帐户概览")
             current_pnl = sum((p.get('current', p['entry']) - p['entry']) * p['qty'] if p['dir'] == "做多" else (p['entry'] - p.get('current', p['entry'])) * p['qty'] for p in data['positions'])
             closed_pnl = sum(p.get('close_pnl', 0) for p in data['closed_positions'])
             total_equity_pnl = current_pnl + closed_pnl
             
             col_eq1, col_eq2, col_eq3 = st.columns(3)
-            with col_eq1: st.metric("未平倉盈虧", f"${current_pnl:+,.2f}")
-            with col_eq2: st.metric("已平倉盈虧", f"${closed_pnl:+,.2f}")
-            with col_eq3: 
-                color = "normal" if total_equity_pnl >= 0 else "inverse"
-                st.metric("總權益變動", f"${total_equity_pnl:+,.2f}", delta_color=color)
+            with col_eq1:
+                st.markdown(f"""<div class="metric-card" style="text-align: center;">
+                    <div style="color: #9ca3af; font-size: 14px; margin-bottom: 8px;">未平仓盈亏</div>
+                    <div style="font-size: 28px; font-weight: bold; color: {'#22c55e' if current_pnl >= 0 else '#ef4444'};">${current_pnl:+,.2f}</div>
+                </div>""", unsafe_allow_html=True)
+            with col_eq2:
+                st.markdown(f"""<div class="metric-card" style="text-align: center;">
+                    <div style="color: #9ca3af; font-size: 14px; margin-bottom: 8px;">已平仓盈亏</div>
+                    <div style="font-size: 28px; font-weight: bold; color: {'#22c55e' if closed_pnl >= 0 else '#ef4444'};">${closed_pnl:+,.2f}</div>
+                </div>""", unsafe_allow_html=True)
+            with col_eq3:
+                color = "#22c55e" if total_equity_pnl >= 0 else "#ef4444"
+                st.markdown(f"""<div class="metric-card" style="text-align: center; border-color: {color};">
+                    <div style="color: #9ca3af; font-size: 14px; margin-bottom: 8px;">总权益变动</div>
+                    <div style="font-size: 28px; font-weight: bold; color: {color};">${total_equity_pnl:+,.2f}</div>
+                </div>""", unsafe_allow_html=True)
             
             st.markdown("---")
 
-            # 2. 當前持倉明細
+            # 2. 当前持仓明细
             if data['positions']:
-                st.markdown("#### 2️⃣ 當前持倉明細與技術分析")
+                st.markdown("#### 2️⃣ 当前持仓明细与技术分析")
                 
                 for i, p in enumerate(data['positions']):
                     p_ticker = f"{p['code']}.HK" if market == "HK" else p['code']
@@ -791,105 +879,93 @@ with tab4:
                         p['stop_loss'] = stop_loss
                         
                         suggestion = ""
-                        risk_level = " 低風險"
+                        risk_level = "🟢 低风险"
                         signals = []
                         
                         if p['dir'] == "做多":
                             if current < stop_loss:
-                                suggestion = "⚠️ **觸發止損**：現價已跌破移動止損位，建議立即平倉。"
-                                risk_level = "🔴 高風險"; signals.append("觸發止損")
+                                suggestion = "⚠️ **触发止损**：现价已跌破移动止损位，建议立即平仓。"
+                                risk_level = "🔴 高风险"; signals.append("触发止损")
                             elif current > p['entry'] * 1.1:
-                                suggestion = "📈 **獲利豐厚**：建議上移止損位至成本價，鎖定利潤。"
-                                risk_level = "🟡 中風險"; signals.append("止盈追蹤")
+                                suggestion = "📈 **获利丰厚**：建议上移止损位至成本价，锁定利润。"
+                                risk_level = "🟡 中风险"; signals.append("止盈追踪")
                             elif rsi > 70:
-                                suggestion = "⚠️ **RSI 超買**：短期可能回調，建議持有但暫停加倉。"
-                                risk_level = "🟡 中風險"; signals.append("RSI 超買")
+                                suggestion = "⚠️ **RSI 超买**：短期可能回调，建议持有但暂停加仓。"
+                                risk_level = "🟡 中风险"; signals.append("RSI 超买")
                             else:
-                                suggestion = "✅ **趨勢良好**：建議繼續持有，嚴格執行移動止損。"
+                                suggestion = "✅ **趋势良好**：建议继续持有，严格执行移动止损。"
                         else:
                             if current > stop_loss:
-                                suggestion = "️ **觸發止損**：現價已突破移動止損位，建議立即平倉。"
-                                risk_level = "🔴 高風險"; signals.append("觸發止損")
+                                suggestion = "⚠️ **触发止损**：现价已突破移动止损位，建议立即平仓。"
+                                risk_level = " 高风险"; signals.append("触发止损")
                             elif current < p['entry'] * 0.9:
-                                suggestion = "📉 **獲利豐厚**：建議下移止損位至成本價，鎖定利潤。"
-                                risk_level = " 中風險"; signals.append("止盈追蹤")
+                                suggestion = "📉 **获利丰厚**：建议下移止损位至成本价，锁定利润。"
+                                risk_level = " 中风险"; signals.append("止盈追踪")
                             elif rsi < 30:
-                                suggestion = "⚠️ **RSI 超賣**：短期可能反彈，建議持有但暫停加倉。"
-                                risk_level = " 中風險"; signals.append("RSI 超賣")
+                                suggestion = "⚠️ **RSI 超卖**：短期可能反弹，建议持有但暂停加仓。"
+                                risk_level = "🟡 中风险"; signals.append("RSI 超卖")
                             else:
-                                suggestion = "✅ **趨勢良好**：建議繼續持有，嚴格執行移動止損。"
+                                suggestion = "✅ **趋势良好**：建议继续持有，严格执行移动止损。"
                         
-                        with st.expander(f"📌 {p['code']} ({p['dir']}) | 盈虧：{pnl:+,.2f} ({pnl_pct:+.2f}%) | {risk_level}", expanded=True):
-                            col_info1, col_info2 = st.columns([1.2, 1])
+                        # 专业 Statement 风格卡片
+                        pnl_color = "#22c55e" if pnl >= 0 else "#ef4444"
+                        st.markdown(f"""
+                        <div class="metric-card" style="margin-bottom: 20px; border-left: 4px solid {pnl_color};">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #334155;">
+                                <h3 style="color: #60a5fa; margin: 0; font-size: 20px;"> {p['code']} ({p['dir']})</h3>
+                                <div style="font-size: 24px; font-weight: bold; color: {pnl_color};">${pnl:+,.2f} ({pnl_pct:+.2f}%)</div>
+                            </div>
                             
-                            with col_info1:
-                                st.markdown(f"""
-                                <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
-                                    <tr style="background: #1e293b;">
-                                        <td style="padding: 8px; border: 1px solid #334155; font-weight: bold; color: white;">指標</td>
-                                        <td style="padding: 8px; border: 1px solid #334155; color: white;">數值</td>
-                                        <td style="padding: 8px; border: 1px solid #334155; font-weight: bold; color: white;">指標</td>
-                                        <td style="padding: 8px; border: 1px solid #334155; color: white;">數值</td>
-                                    </tr>
-                                    <tr>
-                                        <td style="padding: 8px; border: 1px solid #334155;">現價</td>
-                                        <td style="padding: 8px; border: 1px solid #334155; text-align: center;">{current:.2f}</td>
-                                        <td style="padding: 8px; border: 1px solid #334155;">RSI (14)</td>
-                                        <td style="padding: 8px; border: 1px solid #334155; text-align: center;">{rsi:.1f}</td>
-                                    </tr>
-                                    <tr style="background: #0f172a;">
-                                        <td style="padding: 8px; border: 1px solid #334155;">買入價</td>
-                                        <td style="padding: 8px; border: 1px solid #334155; text-align: center;">{p['entry']:.2f}</td>
-                                        <td style="padding: 8px; border: 1px solid #334155;">形態</td>
-                                        <td style="padding: 8px; border: 1px solid #334155; text-align: center; color: {pattern_color}; font-weight: bold;">{pattern}</td>
-                                    </tr>
-                                    <tr>
-                                        <td style="padding: 8px; border: 1px solid #334155;">止損位</td>
-                                        <td style="padding: 8px; border: 1px solid #334155; text-align: center;">{stop_loss:.2f}</td>
-                                        <td style="padding: 8px; border: 1px solid #334155;">浪型</td>
-                                        <td style="padding: 8px; border: 1px solid #334155; text-align: center;">{wave_type}</td>
-                                    </tr>
-                                    <tr style="background: #0f172a;">
-                                        <td style="padding: 8px; border: 1px solid #334155;">成交量</td>
-                                        <td style="padding: 8px; border: 1px solid #334155; text-align: center;">{vol_status}</td>
-                                        <td style="padding: 8px; border: 1px solid #334155;">共振</td>
-                                        <td style="padding: 8px; border: 1px solid #334155; text-align: center;">{resonance_status}</td>
-                                    </tr>
-                                </table>
-                                """, unsafe_allow_html=True)
+                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 15px;">
+                                <div style="background: #1e293b; padding: 12px; border-radius: 8px;">
+                                    <div style="color: #9ca3af; font-size: 12px; margin-bottom: 5px;">现价</div>
+                                    <div style="color: #22c55e; font-size: 18px; font-weight: bold;">${current:.2f}</div>
+                                </div>
+                                <div style="background: #1e293b; padding: 12px; border-radius: 8px;">
+                                    <div style="color: #9ca3af; font-size: 12px; margin-bottom: 5px;">RSI (14)</div>
+                                    <div style="color: {'#ef4444' if rsi > 70 else '#22c55e' if rsi < 30 else '#eab308'}; font-size: 18px; font-weight: bold;">{rsi:.1f}</div>
+                                </div>
+                                <div style="background: #1e293b; padding: 12px; border-radius: 8px;">
+                                    <div style="color: #9ca3af; font-size: 12px; margin-bottom: 5px;">形态</div>
+                                    <div style="color: {pattern_color}; font-size: 16px; font-weight: bold;">{pattern}</div>
+                                </div>
+                            </div>
                             
-                            with col_info2:
-                                st.markdown(f"**📊 形態與趨勢分析**")
-                                st.markdown(f"- {pattern_desc}")
-                                st.markdown(f"- **量能與共振**: {resonance_desc}。當前成交量{vol_status}，{'需警惕變盤' if '異常' in vol_status else '量能正常'}。")
-                                
-                                st.markdown(f"**💡 操作建議 ({' / '.join(signals) if signals else '正常持有'})**")
-                                st.markdown(f"- {suggestion}")
-                                st.markdown(f"- **最終持倉建議**: 維持當前倉位，關注 {fib['支撐位'][2]:.2f} 支撐與 {fib['長期阻力'][0]:.2f} 阻力。")
-                        
-                        st.markdown("---")
+                            <div style="background: rgba(59,130,246,0.1); padding: 12px; border-radius: 8px; border-left: 3px solid #3b82f6; margin-bottom: 10px;">
+                                <div style="color: #60a5fa; font-weight: bold; margin-bottom: 5px;">💡 操作建议 ({' / '.join(signals) if signals else '正常持有'})</div>
+                                <div style="color: #e2e8f0; font-size: 14px;">{suggestion.replace('**', '').replace('：', ': ')}</div>
+                            </div>
+                            
+                            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; font-size: 13px;">
+                                <div style="color: #9ca3af;">📊 浪型: <span style="color: #60a5fa;">{wave_type}</span></div>
+                                <div style="color: #9ca3af;">📈 成交量: <span style="color: {('#ef4444' if '异常' in vol_status else '#22c55e')}">{vol_status}</span></div>
+                                <div style="color: #9ca3af;">🎯 止损位: <span style="color: #ef4444;">${stop_loss:.2f}</span></div>
+                                <div style="color: #9ca3af;">🔄 共振: <span style="color: {('#22c55e' if '✅' in resonance_status else '#eab308')}">{resonance_status}</span></div>
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
             
-            # 3. 已平倉記錄
+            # 3. 已平仓记录
             if data['closed_positions']:
-                st.markdown("#### 3️⃣ 當日/歷史已平倉記錄")
+                st.markdown("#### 3️⃣ 当日/历史已平仓记录")
                 closed_data = []
                 for cp in data['closed_positions']:
                     closed_data.append({
-                        "代碼": cp['code'],
+                        "代码": cp['code'],
                         "方向": cp['dir'],
-                        "買入價": cp['entry'],
-                        "平倉價": cp.get('close_price', 0),
-                        "數量": cp['qty'],
-                        "平倉盈虧": cp.get('close_pnl', 0),
-                        "平倉時間": cp.get('close_date', 'N/A')
+                        "买入价": cp['entry'],
+                        "平仓价": cp.get('close_price', 0),
+                        "数量": cp['qty'],
+                        "平仓盈亏": cp.get('close_pnl', 0),
+                        "平仓时间": cp.get('close_date', 'N/A')
                     })
                 df_closed = pd.DataFrame(closed_data)
                 st.dataframe(
                     df_closed,
                     column_config={
-                        "買入價": st.column_config.NumberColumn(format="$%.2f"),
-                        "平倉價": st.column_config.NumberColumn(format="$%.2f"),
-                        "平倉盈虧": st.column_config.NumberColumn(format="$%+,.2f"),
+                        "买入价": st.column_config.NumberColumn(format="$%.2f"),
+                        "平仓价": st.column_config.NumberColumn(format="$%.2f"),
+                        "平仓盈亏": st.column_config.NumberColumn(format="$%+,.2f"),
                     },
                     use_container_width=True,
                     hide_index=True,
@@ -897,19 +973,44 @@ with tab4:
                 )
                 st.markdown("---")
 
-            # 4. 策略回測摘要
-            st.markdown("#### 4️⃣ 帳號回測結果與策略優化建議")
+            # 4. 策略回测摘要
+            st.markdown("#### 4️⃣ 帐号回测结果与策略优化建议")
             col_b1, col_b2, col_b3, col_b4 = st.columns(4)
-            with col_b1: st.metric("總回報率", "+24.5%")
-            with col_b2: st.metric("夏普比率", "1.85")
-            with col_b3: st.metric("最大回撤", "-8.3%")
-            with col_b4: st.metric("勝率", "68.5%")
+            with col_b1: 
+                st.markdown(f"""<div class="metric-card" style="text-align: center;">
+                    <div style="color: #9ca3af; font-size: 12px;">总回报率</div>
+                    <div style="color: #22c55e; font-size: 24px; font-weight: bold;">+24.5%</div>
+                </div>""", unsafe_allow_html=True)
+            with col_b2: 
+                st.markdown(f"""<div class="metric-card" style="text-align: center;">
+                    <div style="color: #9ca3af; font-size: 12px;">夏普比率</div>
+                    <div style="color: #60a5fa; font-size: 24px; font-weight: bold;">1.85</div>
+                </div>""", unsafe_allow_html=True)
+            with col_b3: 
+                st.markdown(f"""<div class="metric-card" style="text-align: center;">
+                    <div style="color: #9ca3af; font-size: 12px;">最大回撤</div>
+                    <div style="color: #ef4444; font-size: 24px; font-weight: bold;">-8.3%</div>
+                </div>""", unsafe_allow_html=True)
+            with col_b4: 
+                st.markdown(f"""<div class="metric-card" style="text-align: center;">
+                    <div style="color: #9ca3af; font-size: 12px;">胜率</div>
+                    <div style="color: #22c55e; font-size: 24px; font-weight: bold;">68.5%</div>
+                </div>""", unsafe_allow_html=True)
             
             st.markdown("""
-            **💡 AI 改進建議與新增策略：**
-            * **回測新增策略**：「突破 + 回踩 + 放量三重過濾」。當價格突破 Swing High，回踩 FIB 38.2% 且成交量 > 1.5 倍均量時進場，歷史勝率提升 12%。
-            * **優化持倉管理**：已全面加入 **Trailing Stop (移動止損)**。當持倉獲利超過 5% 時，止損位自動上移至最高價回撤 3% 處，有效鎖定利潤並讓利潤奔跑。
-            """)
+            <div style="background: linear-gradient(135deg, rgba(59,130,246,0.1), rgba(147,51,234,0.1)); 
+                        padding: 20px; border-radius: 12px; border: 2px solid #3b82f6; margin-top: 20px;">
+                <h3 style="color: #60a5fa; margin: 0 0 15px 0;">💡 AI 改进建议与新增策略：</h3>
+                <div style="color: #e2e8f0; line-height: 1.8;">
+                    <div style="margin-bottom: 10px;">
+                        <strong style="color: #22c55e;">✓ 回测新增策略：</strong>「突破 + 回踩 + 放量三重过滤」。当价格突破 Swing High，回踩 FIB 38.2% 且成交量 > 1.5 倍均量时进场，历史胜率提升 12%。
+                    </div>
+                    <div>
+                        <strong style="color: #22c55e;">✓ 优化持仓管理：</strong>已全面加入 <strong style="color: #f97316;">Trailing Stop (移动止损)</strong>。当持仓获利超过 5% 时，止损位自动上移至最高价回撤 3% 处，有效锁定利润并让利润奔跑。
+                    </div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
             
             sync.save_data(data)
-            st.success("✅ 日報生成完畢，持倉數據與移動止損已更新！")
+            st.success("✅ 日报生成完毕，持仓数据与移动止损已更新！")
