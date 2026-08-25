@@ -596,15 +596,6 @@
       "added_at": "08-25"
     },
     {
-      "code": "MSFT",
-      "entry": 0.01,
-      "qty": 100,
-      "dir": "做多",
-      "current": 487.30999755859375,
-      "stop_loss": 93.82,
-      "added_at": "08-25"
-    },
-    {
       "code": "GOOG",
       "entry": 345.0,
       "qty": 100,
