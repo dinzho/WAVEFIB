@@ -26,11 +26,6 @@ st.markdown("""
     text-align: center !important;
     vertical-align: middle !important;
 }
-
-/* 觀察清單表格置中 */
-div[data-testid="stHorizontalBlock"] div[data-testid="column"] div {
-    text-align: center;
-}
 </style>
 """, unsafe_allow_html=True)
 
@@ -79,7 +74,7 @@ class GitHubSync:
                 return self._get_default_data()
             return self._get_default_data()
         except json.JSONDecodeError:
-            st.warning("⚠️ 雲端數據格式錯誤，已自動重置為預設數據。")
+            st.warning("️ 雲端數據格式錯誤，已自動重置為預設數據。")
             default_data = self._get_default_data()
             self.save_data(default_data)
             return default_data
@@ -250,7 +245,7 @@ def analyze_volume_anomaly(df):
     if ratio > 2.0:
         return "異常放量 🔥", ratio
     elif ratio < 0.5:
-        return "異常縮量 ❄️", ratio
+        return "異常縮量 ️", ratio
     else:
         return "正常", ratio
 
@@ -316,7 +311,7 @@ with st.sidebar:
         if sync.is_configured:
             st.success("✅ 使用環境變量配置")
         else:
-            st.warning("⚠️ 未配置 GitHub，數據僅暫存")
+            st.warning("️ 未配置 GitHub，數據僅暫存")
     
     st.markdown("---")
     st.title("🔍 股票查詢")
@@ -386,8 +381,7 @@ with tab1:
             <p style="font-size: 22px; font-weight: bold; color: {pattern_color}; margin: 10px 0;">{pattern}</p>
             <p style="color: #9ca3af; margin: 0; font-size: 13px;">{pattern_desc}</p></div>""", unsafe_allow_html=True)
     
-    # 【修復 5】斐波那契區間縮小
-    st.markdown("### 📐 斐波那契區間")
+    st.markdown("###  斐波那契區間")
     col_fib1, col_fib2, col_fib3 = st.columns(3)
     
     with col_fib1:
@@ -409,7 +403,7 @@ with tab1:
     
     with col_fib3:
         st.markdown("""<div style="background: linear-gradient(135deg, rgba(234,179,8,0.1), rgba(234,179,8,0.05)); padding: 8px; border-radius: 6px; border-left: 3px solid #eab308;">
-            <h4 style="color: #eab308; margin: 0 0 5px 0; font-size: 14px;">🎯 關鍵位</h4>
+            <h4 style="color: #eab308; margin: 0 0 5px 0; font-size: 14px;"> 關鍵位</h4>
         </div>""", unsafe_allow_html=True)
         st.metric("波段高點", f"{fib_zones['關鍵位'][1]:.2f}")
         st.metric("波段低點", f"{fib_zones['關鍵位'][0]:.2f}")
@@ -469,10 +463,10 @@ with tab1:
     st.plotly_chart(fig, use_container_width=True)
 
 # ==========================================
-# Tab 2: 觀察清單 (修復：移除日期、阻力位拆分、趨勢顏色、置中)
+# Tab 2: 觀察清單 (修復：自動升級舊數據結構)
 # ==========================================
 with tab2:
-    st.title("👁️ 觀察清單 (Excel 風格)")
+    st.title("️ 觀察清單 (Excel 風格)")
     
     with st.expander("➕ 新增股票到觀察清單", expanded=False):
         with st.form("add_stock", clear_on_submit=True):
@@ -492,7 +486,6 @@ with tab2:
                         w_type, w_desc = identify_wave_pattern(s, new_df)
                         fib = calculate_fib_zones(h, l)
                         
-                        # 判斷趨勢
                         if "第 3 浪" in w_type:
                             trend = "上升"
                         elif "調整浪" in w_type or "第 5 浪" in w_type:
@@ -520,6 +513,19 @@ with tab2:
     if data['watchlist']:
         st.markdown(f"### 📋 已追蹤 {len(data['watchlist'])} 支股票")
         
+        # 【核心修復】自動升級舊版數據結構，防止 KeyError
+        for item in data['watchlist']:
+            if 'short_resist' not in item:
+                old_resist = item.get('fib_resist', item.get('current_price', 0) * 1.05)
+                item['short_resist'] = old_resist
+                item['long_resist'] = old_resist * 1.05
+            if 'trend' not in item:
+                item['trend'] = "盤整"
+            if 'wave_type' not in item:
+                item['wave_type'] = "未知"
+            if 'fib_support' not in item:
+                item['fib_support'] = item.get('current_price', 0) * 0.95
+
         # 使用 HTML 表格實現完全控制 (顏色 + 置中)
         html_table = """
         <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
@@ -785,7 +791,7 @@ with tab4:
                         p['stop_loss'] = stop_loss
                         
                         suggestion = ""
-                        risk_level = "🟢 低風險"
+                        risk_level = " 低風險"
                         signals = []
                         
                         if p['dir'] == "做多":
@@ -796,29 +802,27 @@ with tab4:
                                 suggestion = "📈 **獲利豐厚**：建議上移止損位至成本價，鎖定利潤。"
                                 risk_level = "🟡 中風險"; signals.append("止盈追蹤")
                             elif rsi > 70:
-                                suggestion = "️ **RSI 超買**：短期可能回調，建議持有但暫停加倉。"
+                                suggestion = "⚠️ **RSI 超買**：短期可能回調，建議持有但暫停加倉。"
                                 risk_level = "🟡 中風險"; signals.append("RSI 超買")
                             else:
                                 suggestion = "✅ **趨勢良好**：建議繼續持有，嚴格執行移動止損。"
                         else:
                             if current > stop_loss:
-                                suggestion = "⚠️ **觸發止損**：現價已突破移動止損位，建議立即平倉。"
+                                suggestion = "️ **觸發止損**：現價已突破移動止損位，建議立即平倉。"
                                 risk_level = "🔴 高風險"; signals.append("觸發止損")
                             elif current < p['entry'] * 0.9:
-                                suggestion = " **獲利豐厚**：建議下移止損位至成本價，鎖定利潤。"
-                                risk_level = "🟡 中風險"; signals.append("止盈追蹤")
+                                suggestion = "📉 **獲利豐厚**：建議下移止損位至成本價，鎖定利潤。"
+                                risk_level = " 中風險"; signals.append("止盈追蹤")
                             elif rsi < 30:
                                 suggestion = "⚠️ **RSI 超賣**：短期可能反彈，建議持有但暫停加倉。"
-                                risk_level = "🟡 中風險"; signals.append("RSI 超賣")
+                                risk_level = " 中風險"; signals.append("RSI 超賣")
                             else:
                                 suggestion = "✅ **趨勢良好**：建議繼續持有，嚴格執行移動止損。"
                         
-                        # 【修復 1】形態顏色正確顯示 (使用 HTML 而非 Markdown 表格)
                         with st.expander(f"📌 {p['code']} ({p['dir']}) | 盈虧：{pnl:+,.2f} ({pnl_pct:+.2f}%) | {risk_level}", expanded=True):
                             col_info1, col_info2 = st.columns([1.2, 1])
                             
                             with col_info1:
-                                # 使用 HTML 表格，形態欄位正確渲染顏色
                                 st.markdown(f"""
                                 <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
                                     <tr style="background: #1e293b;">
@@ -894,7 +898,7 @@ with tab4:
                 st.markdown("---")
 
             # 4. 策略回測摘要
-            st.markdown("#### 4️ 帳號回測結果與策略優化建議")
+            st.markdown("#### 4️⃣ 帳號回測結果與策略優化建議")
             col_b1, col_b2, col_b3, col_b4 = st.columns(4)
             with col_b1: st.metric("總回報率", "+24.5%")
             with col_b2: st.metric("夏普比率", "1.85")
