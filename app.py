@@ -9,7 +9,7 @@ import os
 import numpy as np
 
 # ==========================================
-# 1. GitHub 同步管理 (支援用戶自行配置)
+# 1. GitHub 同步管理 (增強容錯與自動修復)
 # ==========================================
 class GitHubSync:
     def __init__(self, token=None, repo_name=None):
@@ -36,14 +36,28 @@ class GitHubSync:
         
         try:
             file_content = self.repo.get_contents(self.file_path)
-            data = json.loads(file_content.decoded_content.decode("utf-8"))
+            raw_content = file_content.decoded_content.decode("utf-8").strip()
+            
+            # 【修復】處理空文件或無效 JSON
+            if not raw_content:
+                data = self._get_default_data()
+            else:
+                data = json.loads(raw_content)
+                
             st.session_state['app_data'] = data
             return data
         except GithubException as e:
             if e.status == 404:
+                # 文件不存在，創建預設文件
                 self.save_data(self._get_default_data())
                 return self._get_default_data()
             return self._get_default_data()
+        except json.JSONDecodeError:
+            # 【修復】JSON 格式錯誤，重置為預設數據並嘗試覆蓋修復
+            st.warning("️ 雲端數據格式錯誤，已自動重置為預設數據。")
+            default_data = self._get_default_data()
+            self.save_data(default_data)
+            return default_data
 
     def save_data(self, data):
         st.session_state['app_data'] = data
@@ -51,15 +65,28 @@ class GitHubSync:
             return
         
         try:
+            # 確保 data 是有效的字典
+            if not isinstance(data, dict):
+                data = self._get_default_data()
+                
             file_content = self.repo.get_contents(self.file_path)
             self.repo.update_file(
                 self.file_path, "Update portfolio", 
                 json.dumps(data, indent=2, ensure_ascii=False), file_content.sha
             )
-        except: pass
+        except GithubException as e:
+            if e.status == 404:
+                # 文件不存在，嘗試創建
+                try:
+                    self.repo.create_file(
+                        self.file_path, "Create portfolio data", 
+                        json.dumps(data, indent=2, ensure_ascii=False)
+                    )
+                except:
+                    pass
 
 # ==========================================
-# 2. 技術分析核心函數 (增強穩定性)
+# 2. 技術分析核心函數
 # ==========================================
 def calculate_rsi(series, period=14):
     delta = series.diff()
@@ -77,12 +104,10 @@ def calculate_macd(df):
     return macd, signal, hist
 
 def find_swings(df, threshold_pct=3.0):
-    """【修復 1】尋找顯著波段高低點 - 保證永遠返回有效數值"""
+    """尋找顯著波段高低點 - 保證永遠返回有效數值"""
     if df is None or len(df) < 2:
-        # 返回安全預設值
         return 100.0, 90.0, []
     
-    # 確保數據類型正確
     df = df.copy()
     df['High'] = pd.to_numeric(df['High'], errors='coerce')
     df['Low'] = pd.to_numeric(df['Low'], errors='coerce')
@@ -116,13 +141,11 @@ def find_swings(df, threshold_pct=3.0):
             elif last_low > 0 and (high - last_low) / last_low * 100 >= threshold_pct:
                 swings.append({'idx': i-1, 'type': 'low', 'price': last_low}); trend = 1; last_high = high
     
-    # 【關鍵修復】永遠返回有效的 high 和 low
     high_price = float(df['High'].max())
     low_price = float(df['Low'].min())
     
-    # 確保 high > low
     if high_price <= low_price:
-        high_price = low_price * 1.05  # 給一個 5% 的緩衝
+        high_price = low_price * 1.05
     
     return high_price, low_price, swings
 
@@ -165,15 +188,14 @@ def analyze_dow_theory(df):
         return "盤整趨勢", "高低點混亂，等待方向突破"
 
 def calculate_fib_zones(high, low):
-    """【修復 2】計算斐波那契區間 - 增加防禦性編程"""
+    """計算斐波那契區間 - 增加防禦性編程"""
     if high is None or low is None:
-        high, low = 100.0, 90.0  # 安全預設值
+        high, low = 100.0, 90.0
     
     if not isinstance(high, (int, float)) or not isinstance(low, (int, float)):
         high, low = 100.0, 90.0
     
     if high == low or high <= 0 or low <= 0:
-        # 避免除零錯誤
         high = max(high, low * 1.05)
     
     diff = abs(high - low)
@@ -245,7 +267,6 @@ def fetch_data(ticker, period="2y", interval="1d"):
 # ==========================================
 st.set_page_config(page_title="智能個股分析平台", layout="wide", page_icon="🌊")
 
-# 【修復 3】GitHub 配置放在 Sidebar 讓用戶自行輸入
 with st.sidebar:
     st.title("⚙️ 系統設定")
     
@@ -258,7 +279,6 @@ with st.sidebar:
                                  help="格式: 你的用戶名/倉庫名")
     
     if github_token and github_repo:
-        # 創建帶有用戶配置的 sync 對象
         sync = GitHubSync(token=github_token, repo_name=github_repo)
         if sync.is_configured:
             st.success("✅ GitHub 同步已啟用")
@@ -278,16 +298,14 @@ with st.sidebar:
     ticker = f"{search_code}.HK" if market == "HK" else search_code
     
     st.markdown("---")
-    st.title("️ 分析參數")
+    st.title("⚙️ 分析參數")
     threshold = st.slider("波段閾值 (%)", 0.5, 15.0, 3.0, 0.5, 
                          help="小時線建議 1-2%，日線建議 3-5%")
     tf_large = st.selectbox("大級別", ["週線", "月線", "日線"])
     tf_small = st.selectbox("小級別", ["日線", "小時線", "週線"])
 
-# 主標題
 st.title("🌊 智能個股分析平台 - 波浪理論專業版")
 
-# 加載數據
 data = sync.load_data()
 period_map = {"月線": "5y", "週線": "2y", "日線": "1y", "小時線": "3mo"}
 interval_map = {"月線": "1mo", "週線": "1wk", "日線": "1d", "小時線": "1h"}
@@ -299,13 +317,11 @@ if df_large is None or df_small is None:
     st.error("無法獲取數據，請檢查代碼或嘗試切換時間框架。")
     st.stop()
 
-# 當前價格
 current_price = df_small['Close'].iloc[-1]
 prev_close = df_small['Close'].iloc[-2] if len(df_small) > 1 else current_price
 change = current_price - prev_close
 change_pct = (change / prev_close) * 100
 
-# 顯示指標卡片
 col1, col2, col3, col4 = st.columns(4)
 with col1:
     st.metric("當前價格", f"{current_price:.2f}", f"{change:+.2f} ({change_pct:+.2f}%)")
@@ -323,7 +339,6 @@ with col4:
     else:
         st.metric("成交量", "無數據")
 
-# 技術分析
 high_price, low_price, swings = find_swings(df_small, threshold)
 wave_type, wave_desc = identify_wave_pattern(swings, df_small)
 dow_trend, dow_desc = analyze_dow_theory(df_small)
@@ -331,11 +346,9 @@ pattern, pattern_desc = analyze_pattern(df_small)
 fib_zones = calculate_fib_zones(high_price, low_price)
 strategies = generate_strategy(current_price, fib_zones, wave_type, dow_trend)
 
-# 標籤頁
-tab1, tab2, tab3 = st.tabs([" 共振分析儀表板", "️ 觀察清單", "💼 模擬持倉"])
+tab1, tab2, tab3 = st.tabs(["📊 共振分析儀表板", "👁️ 觀察清單", "💼 模擬持倉"])
 
 with tab1:
-    # 道氏理論 + 波浪定位
     st.markdown("### 📐 道氏理論與波浪分析")
     col_dow1, col_dow2 = st.columns(2)
     with col_dow1:
@@ -349,7 +362,6 @@ with tab1:
             <p style="font-size: 26px; font-weight: bold; color: #22c55e; margin: 10px 0;">{wave_type}</p>
             <p style="color: #9ca3af; margin: 0; font-size: 14px;">{wave_desc}</p></div>""", unsafe_allow_html=True)
     
-    # 【修復 4】斐波那契區間 - 美化 UI
     st.markdown("### 📐 斐波那契區間")
     col_fib1, col_fib2, col_fib3 = st.columns(3)
     
@@ -363,7 +375,7 @@ with tab1:
     
     with col_fib2:
         st.markdown("""<div style="background: linear-gradient(135deg, rgba(34,197,94,0.1), rgba(34,197,94,0.05)); padding: 15px; border-radius: 10px; border-left: 4px solid #22c55e;">
-            <h4 style="color: #22c55e; margin: 0 0 10px 0;"> 支撐位</h4>
+            <h4 style="color: #22c55e; margin: 0 0 10px 0;">📉 支撐位</h4>
         </div>""", unsafe_allow_html=True)
         st.metric("38.2% 支撐", f"{fib_zones['支撐位'][0]:.2f}")
         st.metric("50.0% 中軸", f"{fib_zones['支撐位'][1]:.2f}")
@@ -377,13 +389,11 @@ with tab1:
         st.metric("波段低點", f"{fib_zones['關鍵位'][0]:.2f}")
         st.metric("波動幅度", f"{fib_zones['high'] - fib_zones['low']:.2f}")
     
-    # 形態分析
     st.markdown("### 📊 形態與趨勢分析")
     st.markdown(f"""<div style="padding: 15px; border-radius: 10px; background: linear-gradient(135deg, rgba(234,179,8,0.1), rgba(234,179,8,0.05)); border-left: 4px solid #eab308;">
         <p style="margin: 0; font-size: 16px;"><strong>當前形態:</strong> <span style="color: #eab308; font-weight: bold;">{pattern}</span></p>
         <p style="margin: 5px 0 0 0; color: #9ca3af; font-size: 14px;">{pattern_desc}</p></div>""", unsafe_allow_html=True)
     
-    # 三種情境策略
     st.markdown("### 🎯 建議策略與三種情況點位")
     col_s1, col_s2, col_s3 = st.columns(3)
     
@@ -407,25 +417,22 @@ with tab1:
     
     with col_s3:
         st.markdown(f"""<div style="padding: 20px; border-radius: 12px; background: linear-gradient(135deg, rgba(239,68,68,0.2), rgba(239,68,68,0.05)); border: 2px solid rgba(239,68,68,0.5); box-shadow: 0 4px 6px rgba(239,68,68,0.2);">
-            <h3 style="color: #f87171; margin: 0;">⚠️ 悲觀情境</h3>
+            <h3 style="color: #f87171; margin: 0;">️ 悲觀情境</h3>
             <p style="font-size: 32px; font-weight: bold; color: #f87171; margin: 15px 0;">{strategies['悲觀']['目標']:.2f}</p>
             <div style="background: rgba(239,68,68,0.2); padding: 8px; border-radius: 6px; margin: 10px 0;">
                 <p style="color: #9ca3af; margin: 0; font-size: 13px;">概率: {strategies['悲觀']['概率']}</p>
             </div>
             <p style="color: #6b7280; margin: 10px 0 0 0; font-size: 13px; line-height: 1.5;">{strategies['悲觀']['策略']}</p></div>""", unsafe_allow_html=True)
     
-    # 【修復 4】多時間框架圖表 - 加入浪型標記
     st.markdown("### 📊 多時間框架圖表")
     fig = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.03, row_heights=[0.7, 0.3])
     
-    # K線圖
     fig.add_trace(go.Candlestick(
         x=df_small['Date'], open=df_small['Open'], high=df_small['High'],
         low=df_small['Low'], close=df_small['Close'], name='K線',
         increasing_line_color='#22c55e', decreasing_line_color='#ef4444'
     ), row=1, col=1)
     
-    # 【新增】標記 Swing 高低點
     if swings:
         swing_x_high = [df_small['Date'].iloc[s['idx']] for s in swings if s['type'] == 'high']
         swing_y_high = [s['price'] for s in swings if s['type'] == 'high']
@@ -446,7 +453,6 @@ with tab1:
             name='Swing Low'
         ), row=1, col=1)
     
-    # FIB 線
     for i, price in enumerate(fib_zones['支撐位']):
         if price > 0:
             fig.add_hline(y=price, line_dash="dash", line_color="#22c55e", 
@@ -456,7 +462,6 @@ with tab1:
             fig.add_hline(y=price, line_dash="dash", line_color="#ef4444", 
                          opacity=0.5, annotation_text=f"阻力{i+1}", row=1, col=1)
     
-    # 成交量
     if 'Volume' in df_small.columns:
         colors = ['#22c55e' if df_small['Close'].iloc[i] >= df_small['Open'].iloc[i] else '#ef4444' 
                  for i in range(len(df_small))]
@@ -473,10 +478,8 @@ with tab1:
     st.plotly_chart(fig, use_container_width=True)
 
 with tab2:
-    # 【修復 5】觀察清單 - 美化 UI
-    st.title("️ 觀察清單 (自動分析)")
+    st.title("👁️ 觀察清單 (自動分析)")
     
-    # 添加股票表單
     with st.form("add_stock", clear_on_submit=False):
         st.markdown("### ➕ 添加股票到觀察清單")
         col1, col2 = st.columns([3, 1])
@@ -515,27 +518,24 @@ with tab2:
             else:
                 st.warning(f"⚠️ {new_code} 已在清單中")
     
-    # 顯示清單 - 美化卡片
     if data['watchlist']:
         st.markdown(f"### 📋 已追蹤 {len(data['watchlist'])} 支股票")
         
         for i, item in enumerate(data['watchlist']):
-            # 根據浪型選擇顏色
             if "第3浪" in item.get('wave_type', ''):
-                card_color = "22,197,94"  # 綠色
+                card_color = "22,197,94"
                 icon = "🚀"
             elif "第5浪" in item.get('wave_type', ''):
-                card_color = "234,179,8"  # 黃色
-                icon = "⚠️"
+                card_color = "234,179,8"
+                icon = "️"
             elif "回調" in item.get('wave_type', ''):
-                card_color = "59,130,246"  # 藍色
+                card_color = "59,130,246"
                 icon = "📉"
             else:
-                card_color = "147,51,234"  # 紫色
+                card_color = "147,51,234"
                 icon = "📊"
             
             with st.expander(f"{icon} **{item['code']}** - {item['wave_type']} - 加入: {item['added_at']}", expanded=True):
-                # 價格資訊
                 col_price1, col_price2, col_price3 = st.columns(3)
                 with col_price1:
                     st.metric("當前價格", f"{item.get('current_price', 'N/A'):.2f}" if isinstance(item.get('current_price'), (int, float)) else "N/A")
@@ -544,19 +544,17 @@ with tab2:
                 with col_price3:
                     st.metric("阻力位", f"{item['fib_resist']:.2f}")
                 
-                # 趨勢和浪型
                 col_info1, col_info2 = st.columns(2)
                 with col_info1:
-                    st.markdown(f"** 趨勢:** {item['trend']}")
+                    st.markdown(f"**📊 趨勢:** {item['trend']}")
                 with col_info2:
                     st.markdown(f"**🌊 浪型:** {item['wave_type']}")
                 
-                # 策略 (JSON 美化顯示)
                 st.markdown("**🎯 操作策略：**")
                 strategy_col1, strategy_col2, strategy_col3 = st.columns(3)
                 with strategy_col1:
                     st.markdown(f"""<div style="background: rgba(34,197,94,0.1); padding: 10px; border-radius: 8px; border-left: 3px solid #22c55e;">
-                        <strong style="color: #22c55e;"> 樂觀</strong><br>
+                        <strong style="color: #22c55e;">🚀 樂觀</strong><br>
                         <small>{item['strategy']['樂觀']['策略']}</small><br>
                         <strong>{item['strategy']['樂觀']['目標']:.2f}</strong> ({item['strategy']['樂觀']['概率']})
                     </div>""", unsafe_allow_html=True)
@@ -573,8 +571,7 @@ with tab2:
                         <strong>{item['strategy']['悲觀']['目標']:.2f}</strong> ({item['strategy']['悲觀']['概率']})
                     </div>""", unsafe_allow_html=True)
                 
-                # 刪除按鈕
-                if st.button(f"🗑️ 刪除 {item['code']}", key=f"del_wl_{i}", type="secondary"):
+                if st.button(f"️ 刪除 {item['code']}", key=f"del_wl_{i}", type="secondary"):
                     data['watchlist'].pop(i)
                     sync.save_data(data)
                     st.rerun()
@@ -585,7 +582,6 @@ with tab2:
 with tab3:
     st.title("💼 模擬持倉 (實時盈虧)")
     
-    # 添加持倉表單
     with st.form("add_position", clear_on_submit=False):
         st.markdown("### ➕ 新增持倉")
         col1, col2, col3 = st.columns(3)
@@ -625,18 +621,16 @@ with tab3:
                         st.success(f"✅ 已記錄 {pos_code} 持倉")
                         st.rerun()
                     else:
-                        st.error("❌ 無法獲取數據")
+                        st.error(" 無法獲取數據")
                 else:
                     st.warning("⚠️ 請填寫完整資訊")
     
-    # 顯示持倉
     if data['positions']:
         total_pnl = sum(p.get('pnl', 0) for p in data['positions'])
-        st.metric(" 總模擬盈虧", f"{total_pnl:+,.2f}", f"{total_pnl:+,.2f}")
+        st.metric("💼 總模擬盈虧", f"{total_pnl:+,.2f}", f"{total_pnl:+,.2f}")
         st.markdown("---")
         
         for i, p in enumerate(data['positions']):
-            # 更新當前價格
             p_ticker = f"{p['code']}.HK" if market == "HK" else p['code']
             p_df = fetch_data(p_ticker, "1d", "1d")
             if p_df is not None:
@@ -645,7 +639,7 @@ with tab3:
             
             pnl = p.get('pnl', 0)
             color = "green" if pnl >= 0 else "red"
-            icon = "" if pnl >= 0 else "📉"
+            icon = "📈" if pnl >= 0 else "📉"
             
             st.markdown(f"""<div style="padding: 20px; border-radius: 12px; background: linear-gradient(135deg, rgba({34 if pnl>=0 else 239}, {197 if pnl>=0 else 68}, {94 if pnl>=0 else 68}, 0.1), rgba({34 if pnl>=0 else 239}, {197 if pnl>=0 else 68}, {94 if pnl>=0 else 68}, 0.05)); border-left: 5px solid {'#22c55e' if pnl>=0 else '#ef4444'}; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
