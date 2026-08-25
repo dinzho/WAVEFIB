@@ -565,6 +565,17 @@
       "stop_loss": 93.82,
       "suggestion": "止損位: 93.82",
       "added_at": "2026-08-25 07:42"
+    },
+    {
+      "code": "NKE",
+      "entry": 41.0,
+      "qty": 100,
+      "dir": "做多",
+      "current": 40.75,
+      "pnl": -25.0,
+      "stop_loss": 93.82,
+      "suggestion": "止損位: 93.82",
+      "added_at": "2026-08-25 07:42"
     }
   ]
 }
