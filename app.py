@@ -218,7 +218,7 @@ def fetch_data(ticker, period="2y", interval="1d"):
 st.set_page_config(page_title="智能個股分析平台", layout="wide", page_icon="🌊")
 
 with st.sidebar:
-    st.title("️ 系統設定")
+    st.title("⚙️ 系統設定")
     
     st.markdown("### 🔑 GitHub 配置")
     github_token = st.text_input("GitHub Token", type="password", help="Settings > Developer settings > Personal access tokens")
@@ -244,8 +244,8 @@ with st.sidebar:
     ticker = f"{search_code}.HK" if market == "HK" else search_code
     
     st.markdown("---")
-    st.title("️ 分析參數")
-    threshold = st.slider("波段閾值 (%)", 0.5, 15.0, 3.0, 0.5, help="小時線建議 1-2%，日線建議 3-5%")
+    st.title("⚙️ 分析參數")
+    threshold = st.slider("波段值 (%)", 0.5, 15.0, 3.0, 0.5, help="小時線建議 1-2%，日線建議 3-5%")
     tf_large = st.selectbox("大級別", ["週線", "月線", "日線"])
     tf_small = st.selectbox("小級別", ["日線", "小時線", "週線"])
 
@@ -289,7 +289,7 @@ wave_type, wave_desc = identify_wave_pattern(swings, df_small)
 pattern, pattern_desc = analyze_pattern(df_small)
 fib_zones = calculate_fib_zones(high_price, low_price)
 
-tab1, tab2, tab3, tab4 = st.tabs(["📊 共振分析儀表板", "👁️ 觀察清單", " 模擬持倉 (Excel)", "📅 每日持倉日報"])
+tab1, tab2, tab3, tab4 = st.tabs(["📊 共振分析儀表板", "👁️ 觀察清單 (Excel)", "💼 模擬持倉 (Excel)", "📅 每日持倉日報"])
 
 with tab1:
     st.markdown("### 📐 道氏理論與波浪分析")
@@ -305,7 +305,7 @@ with tab1:
             <p style="font-size: 22px; font-weight: bold; color: #22c55e; margin: 10px 0;">{pattern}</p>
             <p style="color: #9ca3af; margin: 0; font-size: 13px;">{pattern_desc}</p></div>""", unsafe_allow_html=True)
     
-    st.markdown("###  斐波那契區間")
+    st.markdown("### 📐 斐波那契區間")
     col_fib1, col_fib2, col_fib3 = st.columns(3)
     
     with col_fib1:
@@ -385,72 +385,103 @@ with tab1:
     )
     st.plotly_chart(fig, use_container_width=True)
 
+# ==========================================
+# Tab 2: 觀察清單 (極致 Excel 風格)
+# ==========================================
 with tab2:
-    st.title("👁️ 觀察清單 (自動分析)")
+    st.title("️ 觀察清單 (Excel 風格)")
     
-    with st.form("add_stock", clear_on_submit=False):
-        st.markdown("### ➕ 添加股票到觀察清單")
-        col1, col2 = st.columns([3, 1])
-        with col1: 
-            new_code = st.text_input("輸入股票代碼", placeholder="例如: AAPL, 0700", key="watch_code").upper()
-        with col2:
-            submit_btn = st.form_submit_button("➕ 加入清單", use_container_width=True)
-        
-        if submit_btn and new_code:
-            if not any(w['code'] == new_code for w in data['watchlist']):
-                new_ticker = f"{new_code}.HK" if market == "HK" else new_code
-                new_df = fetch_data(new_ticker, "1y", "1d")
-                
-                if new_df is not None:
-                    h, l, s = find_swings(new_df, threshold)
-                    w_type, w_desc = identify_wave_pattern(s, new_df)
-                    fib = calculate_fib_zones(h, l)
+    # 新增股票表單 (緊湊型)
+    with st.expander("➕ 新增股票到觀察清單", expanded=False):
+        with st.form("add_stock", clear_on_submit=True):
+            col1, col2 = st.columns([3, 1])
+            with col1: 
+                new_code = st.text_input("輸入股票代碼", placeholder="例如: AAPL, 0700", key="watch_code").upper()
+            with col2:
+                submit_btn = st.form_submit_button("➕ 加入清單", use_container_width=True)
+            
+            if submit_btn and new_code:
+                if not any(w['code'] == new_code for w in data['watchlist']):
+                    new_ticker = f"{new_code}.HK" if market == "HK" else new_code
+                    new_df = fetch_data(new_ticker, "1y", "1d")
                     
-                    data['watchlist'].append({
-                        "code": new_code,
-                        "wave_type": w_type,
-                        "fib_support": fib['支撐位'][2],
-                        "fib_resist": fib['阻力位'][1],
-                        "current_price": new_df['Close'].iloc[-1],
-                        "added_at": pd.Timestamp.now().strftime("%Y-%m-%d %H:%M")
-                    })
-                    sync.save_data(data)
-                    st.success(f"✅ 已加入 {new_code}")
-                    st.rerun()
+                    if new_df is not None:
+                        h, l, s = find_swings(new_df, threshold)
+                        w_type, w_desc = identify_wave_pattern(s, new_df)
+                        fib = calculate_fib_zones(h, l)
+                        
+                        data['watchlist'].append({
+                            "code": new_code,
+                            "wave_type": w_type,
+                            "trend": "上升" if "第3浪" in w_type else "下降" if "調整浪" in w_type else "盤整",
+                            "fib_support": fib['支撐位'][2],
+                            "fib_resist": fib['阻力位'][1],
+                            "current_price": new_df['Close'].iloc[-1],
+                            "added_at": pd.Timestamp.now().strftime("%m-%d")
+                        })
+                        sync.save_data(data)
+                        st.success(f"✅ 已加入 {new_code}")
+                        st.rerun()
+                    else:
+                        st.error("❌ 無法獲取數據")
                 else:
-                    st.error("❌ 無法獲取數據")
-            else:
-                st.warning(f"⚠️ {new_code} 已在清單中")
-    
+                    st.warning(f"⚠️ {new_code} 已在清單中")
+
+    # 顯示觀察清單 (DataFrame 風格)
     if data['watchlist']:
         st.markdown(f"### 📋 已追蹤 {len(data['watchlist'])} 支股票")
         
-        for i, item in enumerate(data['watchlist']):
-            with st.expander(f"**{item['code']}** - {item['wave_type']} - 加入: {item['added_at']}", expanded=True):
-                col_price1, col_price2, col_price3 = st.columns(3)
-                with col_price1:
-                    st.metric("當前價格", f"{item.get('current_price', 'N/A'):.2f}" if isinstance(item.get('current_price'), (int, float)) else "N/A")
-                with col_price2:
-                    st.metric("支撐位", f"{item['fib_support']:.2f}")
-                with col_price3:
-                    st.metric("阻力位", f"{item['fib_resist']:.2f}")
-                
-                if st.button(f"🗑️ 刪除 {item['code']}", key=f"del_wl_{i}", type="secondary"):
-                    data['watchlist'].pop(i)
-                    sync.save_data(data)
-                    st.rerun()
-                st.markdown("---")
+        # 準備 DataFrame 數據
+        wl_data = []
+        for item in data['watchlist']:
+            wl_data.append({
+                "代碼": item['code'],
+                "浪型": item['wave_type'],
+                "趨勢": item.get('trend', 'N/A'),
+                "現價": item.get('current_price', 0),
+                "支撐位": item['fib_support'],
+                "阻力位": item['fib_resist'],
+                "加入日": item.get('added_at', '')
+            })
+        
+        df_wl = pd.DataFrame(wl_data)
+        
+        # 使用 column_config 格式化數字，極度緊湊
+        st.dataframe(
+            df_wl,
+            column_config={
+                "現價": st.column_config.NumberColumn(format="$%.2f"),
+                "支撐位": st.column_config.NumberColumn(format="$%.2f"),
+                "阻力位": st.column_config.NumberColumn(format="$%.2f"),
+            },
+            use_container_width=True,
+            hide_index=True,
+            height=min(len(df_wl) * 35 + 38, 400) # 動態高度，最多顯示 400px
+        )
+        
+        st.markdown("---")
+        st.markdown("### 🗑️ 管理清單 (刪除股票)")
+        
+        # 網格排列刪除按鈕，節省空間
+        if len(data['watchlist']) > 0:
+            cols = st.columns(min(6, len(data['watchlist'])))
+            for i, item in enumerate(data['watchlist']):
+                with cols[i % len(cols)]:
+                    if st.button(f"❌ {item['code']}", key=f"del_wl_{i}", use_container_width=True, type="secondary"):
+                        data['watchlist'].pop(i)
+                        sync.save_data(data)
+                        st.rerun()
     else:
-        st.info(" 觀察清單為空")
+        st.info("📭 觀察清單為空")
 
 # ==========================================
-# Tab 3: 模擬持倉 (Excel 風格)
+# Tab 3: 模擬持倉 (極致 Excel 風格)
 # ==========================================
 with tab3:
     st.title("💼 模擬持倉管理")
     
-    # 新增持倉表單 (使用 expander 折疊，保持界面整潔)
-    with st.expander("➕ 新增持倉 (點擊展開)", expanded=False):
+    # 新增持倉表單 (緊湊型)
+    with st.expander("➕ 新增持倉", expanded=False):
         with st.form("add_position", clear_on_submit=True):
             col1, col2, col3, col4 = st.columns(4)
             with col1:
@@ -458,7 +489,7 @@ with tab3:
             with col2:
                 pos_entry = st.number_input("買入價", min_value=0.01, step=0.01, key="pos_entry_input")
             with col3:
-                pos_qty = st.number_input("數量 (股)", min_value=1, value=100, key="pos_qty_input")
+                pos_qty = st.number_input("數量", min_value=1, value=100, key="pos_qty_input")
             with col4:
                 pos_dir = st.selectbox("方向", ["做多", "做空"], key="pos_dir_input")
             
@@ -481,7 +512,7 @@ with tab3:
                         "dir": pos_dir,
                         "current": current,
                         "stop_loss": stop_loss,
-                        "added_at": pd.Timestamp.now().strftime("%Y-%m-%d %H:%M")
+                        "added_at": pd.Timestamp.now().strftime("%m-%d")
                     })
                     sync.save_data(data)
                     st.success(f"✅ 已記錄 {pos_code} 持倉")
@@ -489,7 +520,7 @@ with tab3:
                 else:
                     st.error("❌ 無法獲取數據")
 
-    # Excel 風格表格展示
+    # 顯示持倉 (DataFrame 風格)
     if data['positions']:
         # 準備表格數據
         table_data = []
@@ -524,48 +555,52 @@ with tab3:
         # 顯示總盈虧
         col_t1, col_t2 = st.columns(2)
         with col_t1:
-            st.metric(" 總持倉成本", f"${total_cost:,.2f}")
+            st.metric("💰 總持倉成本", f"${total_cost:,.2f}")
         with col_t2:
             color = "normal" if total_pnl >= 0 else "inverse"
-            st.metric("💰 總模擬盈虧", f"${total_pnl:+,.2f}", f"{total_pnl:+,.2f}", delta_color=color)
+            st.metric("📈 總模擬盈虧", f"${total_pnl:+,.2f}", f"{total_pnl:+,.2f}", delta_color=color)
         
         st.markdown("---")
         
-        # 顯示 DataFrame (Excel 風格)
+        # 顯示 DataFrame (Excel 風格，無複雜樣式，極度穩定)
         df_positions = pd.DataFrame(table_data)
         
-        # 格式化顯示
         st.dataframe(
-            df_positions.style.format({
-                "買入價": "${:.2f}",
-                "現價": "${:.2f}",
-                "盈虧": "${:+,.2f}",
-                "回報率%": "{:+.2f}%",
-                "止損位": "${:.2f}"
-            }).background_gradient(subset=["盈虧"], cmap="RdYlGn"),
+            df_positions,
+            column_config={
+                "買入價": st.column_config.NumberColumn(format="$%.2f"),
+                "現價": st.column_config.NumberColumn(format="$%.2f"),
+                "盈虧": st.column_config.NumberColumn(format="$%+,.2f"),
+                "回報率%": st.column_config.NumberColumn(format="%+.2f%%"),
+                "止損位": st.column_config.NumberColumn(format="$%.2f"),
+            },
             use_container_width=True,
-            height=300
+            hide_index=True,
+            height=min(len(df_positions) * 35 + 38, 400)
         )
         
         st.markdown("---")
-        st.markdown("### ️ 持倉操作")
+        st.markdown("### 🔄 持倉操作 (平倉)")
         
-        # 平倉按鈕 (放在表格下方，保持整潔)
-        cols = st.columns(len(data['positions']))
-        for i, p in enumerate(data['positions']):
-            with cols[i % len(cols)]:
-                if st.button(f"平倉 {p['code']}", key=f"close_{i}", type="secondary", use_container_width=True):
-                    data['positions'].pop(i)
-                    sync.save_data(data)
-                    st.rerun()
+        # 網格排列平倉按鈕
+        if len(data['positions']) > 0:
+            cols = st.columns(min(6, len(data['positions'])))
+            for i, p in enumerate(data['positions']):
+                pnl = (p.get('current', p['entry']) - p['entry']) * p['qty'] if p['dir'] == "做多" else (p['entry'] - p.get('current', p['entry'])) * p['qty']
+                btn_type = "primary" if pnl >= 0 else "secondary"
+                with cols[i % len(cols)]:
+                    if st.button(f"平倉 {p['code']}", key=f"close_{i}", use_container_width=True, type=btn_type):
+                        data['positions'].pop(i)
+                        sync.save_data(data)
+                        st.rerun()
     else:
-        st.info("💭 尚無持倉記錄，請在上方展開表單新增持倉。")
+        st.info("💭 尚無持倉記錄")
 
 # ==========================================
 # Tab 4: 每日持倉日報
 # ==========================================
 with tab4:
-    st.title("📅 每日持倉日報生成器")
+    st.title(" 每日持倉日報生成器")
     st.markdown("一鍵生成所有持倉的技術分析與操作建議，適合每日開盤前查看。")
     
     if st.button("🔄 生成今日持倉日報", type="primary", use_container_width=True):
@@ -582,38 +617,34 @@ with tab4:
                 
                 if p_df is not None:
                     current = p_df['Close'].iloc[-1]
-                    p['current'] = current  # 更新持倉現價
+                    p['current'] = current
                     
-                    # 技術分析
                     h, l, s = find_swings(p_df, threshold)
                     fib = calculate_fib_zones(h, l)
                     wave_type, wave_desc = identify_wave_pattern(s, p_df)
                     pattern, pattern_desc = analyze_pattern(p_df)
                     rsi = calculate_rsi(p_df['Close']).iloc[-1]
                     
-                    # 計算盈虧
                     pnl = (current - p['entry']) * p['qty'] if p['dir'] == "做多" else (p['entry'] - current) * p['qty']
                     pnl_pct = ((current - p['entry']) / p['entry'] * 100) if p['dir'] == "做多" else ((p['entry'] - current) / p['entry'] * 100)
                     
-                    # 生成建議邏輯
                     suggestion = ""
-                    risk_level = "🟢 低風險"
-                    
+                    risk_level = " 低風險"
                     stop_loss = p.get('stop_loss', fib['支撐位'][2] if p['dir'] == "做多" else fib['阻力位'][0])
                     
                     if p['dir'] == "做多":
                         if current < stop_loss:
-                            suggestion = "⚠️ **觸發止損**：現價已跌破止損位，建議立即平倉或嚴格執行止損紀律。"
+                            suggestion = "⚠️ **觸發止損**：現價已跌破止損位，建議立即平倉。"
                             risk_level = "🔴 高風險"
                         elif current > p['entry'] * 1.1:
-                            suggestion = "📈 **獲利豐厚**：建議上移止損位至成本價，鎖定利潤。可考慮部分獲利了結。"
-                            risk_level = " 中風險"
+                            suggestion = "📈 **獲利豐厚**：建議上移止損位至成本價，鎖定利潤。"
+                            risk_level = "🟡 中風險"
                         elif rsi > 70:
-                            suggestion = "️ **RSI 超買**：短期可能回調，建議持有但暫停加倉，關注 FIB 38.2% 支撐。"
+                            suggestion = "️ **RSI 超買**：短期可能回調，建議持有但暫停加倉。"
                             risk_level = "🟡 中風險"
                         else:
                             suggestion = "✅ **趨勢良好**：建議繼續持有，止損位設在 " + f"{stop_loss:.2f}" + "。"
-                    else:  # 做空
+                    else:
                         if current > stop_loss:
                             suggestion = "⚠️ **觸發止損**：現價已突破止損位，建議立即平倉。"
                             risk_level = "🔴 高風險"
@@ -621,36 +652,26 @@ with tab4:
                             suggestion = "📉 **獲利豐厚**：建議下移止損位至成本價，鎖定利潤。"
                             risk_level = "🟡 中風險"
                         elif rsi < 30:
-                            suggestion = "⚠️ **RSI 超賣**：短期可能反彈，建議持有但暫停加倉，關注 FIB 61.8% 阻力。"
+                            suggestion = "️ **RSI 超賣**：短期可能反彈，建議持有但暫停加倉。"
                             risk_level = "🟡 中風險"
                         else:
                             suggestion = "✅ **趨勢良好**：建議繼續持有，止損位設在 " + f"{stop_loss:.2f}" + "。"
                     
-                    # 顯示日報卡片
-                    with st.expander(f"📌 {p['code']} ({p['dir']}) - 盈虧: {pnl:+,.2f} ({pnl_pct:+.2f}%)", expanded=True):
+                    with st.expander(f" {p['code']} ({p['dir']}) - 盈虧: {pnl:+,.2f} ({pnl_pct:+.2f}%) - {risk_level}", expanded=True):
                         col_r1, col_r2, col_r3 = st.columns(3)
                         with col_r1:
-                            st.markdown(f"**🌊 浪型與形態**")
-                            st.markdown(f"- 浪型: {wave_type}")
-                            st.markdown(f"- 形態: {pattern}")
+                            st.markdown(f"**🌊 浪型與形態**<br>- 浪型: {wave_type}<br>- 形態: {pattern}")
                         with col_r2:
-                            st.markdown(f"**📊 技術指標**")
-                            st.markdown(f"- RSI: {rsi:.1f}")
-                            st.markdown(f"- 現價: {current:.2f}")
+                            st.markdown(f"**📊 技術指標**<br>- RSI: {rsi:.1f}<br>- 現價: {current:.2f}")
                         with col_r3:
-                            st.markdown(f"**🎯 關鍵價位**")
-                            st.markdown(f"- 支撐: {fib['支撐位'][2]:.2f}")
-                            st.markdown(f"- 阻力: {fib['阻力位'][1]:.2f}")
+                            st.markdown(f"**🎯 關鍵價位**<br>- 支撐: {fib['支撐位'][2]:.2f}<br>- 阻力: {fib['阻力位'][1]:.2f}")
                         
                         st.markdown("---")
-                        st.markdown(f"**💡 操作建議 ({risk_level})**")
-                        st.markdown(suggestion)
+                        st.markdown(f"** 操作建議**<br>{suggestion}")
                         
-                        # 更新止損位到持倉數據
                         p['stop_loss'] = stop_loss
                     
                     st.markdown("---")
             
-            # 保存更新後的持倉數據 (包含最新現價和止損位)
             sync.save_data(data)
             st.success("✅ 日報生成完畢，持倉數據已更新！")
