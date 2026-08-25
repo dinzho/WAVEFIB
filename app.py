@@ -9,6 +9,32 @@ import os
 import numpy as np
 
 # ==========================================
+# CSS 樣式注入 (分頁加大 + 表格置中)
+# ==========================================
+st.markdown("""
+<style>
+/* 分頁加大 */
+.stTabs [data-baseweb="tab-list"] button {
+    font-size: 18px !important;
+    padding: 12px 24px !important;
+    font-weight: 600 !important;
+}
+
+/* 表格數字置中 */
+[data-testid="stDataFrame"] th,
+[data-testid="stDataFrame"] td {
+    text-align: center !important;
+    vertical-align: middle !important;
+}
+
+/* 觀察清單表格置中 */
+div[data-testid="stHorizontalBlock"] div[data-testid="column"] div {
+    text-align: center;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# ==========================================
 # 1. GitHub 同步管理
 # ==========================================
 class GitHubSync:
@@ -53,7 +79,7 @@ class GitHubSync:
                 return self._get_default_data()
             return self._get_default_data()
         except json.JSONDecodeError:
-            st.warning("️ 雲端數據格式錯誤，已自動重置為預設數據。")
+            st.warning("⚠️ 雲端數據格式錯誤，已自動重置為預設數據。")
             default_data = self._get_default_data()
             self.save_data(default_data)
             return default_data
@@ -155,11 +181,11 @@ def identify_wave_pattern(swings, df=None):
     
     if len(highs) >= 2 and len(lows) >= 2:
         if highs[-1] > highs[-2] and lows[-1] > lows[-2]:
-            return "第3浪 (主升段)", "強勁上升趨勢"
+            return "第 3 浪 (主升段)", "強勁上升趨勢"
         elif highs[-1] < highs[-2] and lows[-1] > lows[-2]:
-            return "第5浪 (尾聲)", "上升動能減弱"
+            return "第 5 浪 (尾聲)", "上升動能減弱"
         elif highs[-1] > highs[-2] and lows[-1] < lows[-2]:
-            return "第2/4浪 (回調)", "回調階段"
+            return "第 2/4 浪 (回調)", "回調階段"
         else:
             return "調整浪 (ABC)", "盤整或下跌"
     
@@ -178,7 +204,8 @@ def calculate_fib_zones(high, low):
     diff = abs(high - low)
     
     return {
-        "阻力位": [high + diff * 0.618, high + diff * 1.0, high + diff * 1.618],
+        "短期阻力": [high + diff * 0.382, high + diff * 0.618],
+        "長期阻力": [high + diff * 1.0, high + diff * 1.618],
         "支撐位": [high - diff * 0.382, high - diff * 0.5, high - diff * 0.618],
         "關鍵位": [low, high],
         "high": high,
@@ -186,18 +213,27 @@ def calculate_fib_zones(high, low):
     }
 
 def analyze_pattern(df):
-    if len(df) < 30: return "數據不足", "中性"
+    if len(df) < 30: return "數據不足", "中性", "#9ca3af"
     
     ma20 = df['Close'].rolling(window=20).mean().iloc[-1]
     ma50 = df['Close'].rolling(window=50).mean().iloc[-1] if len(df) >= 50 else ma20
     current_price = df['Close'].iloc[-1]
     
     if current_price > ma20 > ma50:
-        return "多頭排列", "MA20 > MA50，趨勢向上"
+        return "多頭排列", "MA20 > MA50，趨勢向上", "#22c55e"
     elif current_price < ma20 < ma50:
-        return "空頭排列", "MA20 < MA50，趨勢向下"
+        return "空頭排列", "MA20 < MA50，趨勢向下", "#ef4444"
     else:
-        return "均線糾纏", "均線交錯"
+        return "均線糾纏", "均線交錯", "#eab308"
+
+def analyze_trend_color(trend_text):
+    """根據趨勢文字返回顏色"""
+    if "上升" in trend_text or "多頭" in trend_text:
+        return "#ef4444"  # 紅色
+    elif "下降" in trend_text or "空頭" in trend_text:
+        return "#000000"  # 黑色
+    else:
+        return "#eab308"  # 黃色 (盤整)
 
 def analyze_volume_anomaly(df):
     if 'Volume' not in df.columns or len(df) < 20:
@@ -267,7 +303,7 @@ with st.sidebar:
     
     st.markdown("### 🔑 GitHub 配置")
     github_token = st.text_input("GitHub Token", type="password", help="Settings > Developer settings > Personal access tokens")
-    github_repo = st.text_input("GitHub 倉庫", placeholder="username/repo", help="格式: 你的用戶名/倉庫名")
+    github_repo = st.text_input("GitHub 倉庫", placeholder="username/repo", help="格式：你的用戶名/倉庫名")
     
     if github_token and github_repo:
         sync = GitHubSync(token=github_token, repo_name=github_repo)
@@ -331,7 +367,7 @@ with col4:
 
 high_price, low_price, swings = find_swings(df_small, threshold)
 wave_type, wave_desc = identify_wave_pattern(swings, df_small)
-pattern, pattern_desc = analyze_pattern(df_small)
+pattern, pattern_desc, pattern_color = analyze_pattern(df_small)
 fib_zones = calculate_fib_zones(high_price, low_price)
 
 tab1, tab2, tab3, tab4 = st.tabs(["📊 共振分析儀表板", "👁️ 觀察清單 (Excel)", "💼 模擬持倉 (Excel)", "📅 每日持倉日報 (Statement)"])
@@ -347,31 +383,33 @@ with tab1:
     with col_dow2:
         st.markdown(f"""<div style="padding: 15px; border-radius: 10px; background: linear-gradient(135deg, rgba(34,197,94,0.15), rgba(168,85,247,0.1)); border: 2px solid rgba(34,197,94,0.4);">
             <h3 style="color: #22c55e; margin: 0 0 10px 0;">🎯 形態分析</h3>
-            <p style="font-size: 22px; font-weight: bold; color: #22c55e; margin: 10px 0;">{pattern}</p>
+            <p style="font-size: 22px; font-weight: bold; color: {pattern_color}; margin: 10px 0;">{pattern}</p>
             <p style="color: #9ca3af; margin: 0; font-size: 13px;">{pattern_desc}</p></div>""", unsafe_allow_html=True)
     
-    st.markdown("###  斐波那契區間")
+    # 【修復 5】斐波那契區間縮小
+    st.markdown("### 📐 斐波那契區間")
     col_fib1, col_fib2, col_fib3 = st.columns(3)
     
     with col_fib1:
-        st.markdown("""<div style="background: linear-gradient(135deg, rgba(239,68,68,0.1), rgba(239,68,68,0.05)); padding: 12px; border-radius: 8px; border-left: 4px solid #ef4444;">
-            <h4 style="color: #ef4444; margin: 0 0 8px 0; font-size: 16px;">📈 阻力位</h4>
+        st.markdown("""<div style="background: linear-gradient(135deg, rgba(239,68,68,0.1), rgba(239,68,68,0.05)); padding: 8px; border-radius: 6px; border-left: 3px solid #ef4444;">
+            <h4 style="color: #ef4444; margin: 0 0 5px 0; font-size: 14px;">📈 阻力位</h4>
         </div>""", unsafe_allow_html=True)
-        st.metric("1.618 延伸", f"{fib_zones['阻力位'][2]:.2f}")
-        st.metric("1.000 等長", f"{fib_zones['阻力位'][1]:.2f}")
-        st.metric("0.618 阻力", f"{fib_zones['阻力位'][0]:.2f}")
+        st.metric("1.618 延伸", f"{fib_zones['長期阻力'][1]:.2f}")
+        st.metric("1.000 等長", f"{fib_zones['長期阻力'][0]:.2f}")
+        st.metric("0.618 阻力", f"{fib_zones['短期阻力'][1]:.2f}")
+        st.metric("0.382 阻力", f"{fib_zones['短期阻力'][0]:.2f}")
     
     with col_fib2:
-        st.markdown("""<div style="background: linear-gradient(135deg, rgba(34,197,94,0.1), rgba(34,197,94,0.05)); padding: 12px; border-radius: 8px; border-left: 4px solid #22c55e;">
-            <h4 style="color: #22c55e; margin: 0 0 8px 0; font-size: 16px;">📉 支撐位</h4>
+        st.markdown("""<div style="background: linear-gradient(135deg, rgba(34,197,94,0.1), rgba(34,197,94,0.05)); padding: 8px; border-radius: 6px; border-left: 3px solid #22c55e;">
+            <h4 style="color: #22c55e; margin: 0 0 5px 0; font-size: 14px;">📉 支撐位</h4>
         </div>""", unsafe_allow_html=True)
         st.metric("38.2% 支撐", f"{fib_zones['支撐位'][0]:.2f}")
         st.metric("50.0% 中軸", f"{fib_zones['支撐位'][1]:.2f}")
         st.metric("61.8% 強支撐", f"{fib_zones['支撐位'][2]:.2f}")
     
     with col_fib3:
-        st.markdown("""<div style="background: linear-gradient(135deg, rgba(234,179,8,0.1), rgba(234,179,8,0.05)); padding: 12px; border-radius: 8px; border-left: 4px solid #eab308;">
-            <h4 style="color: #eab308; margin: 0 0 8px 0; font-size: 16px;"> 關鍵位</h4>
+        st.markdown("""<div style="background: linear-gradient(135deg, rgba(234,179,8,0.1), rgba(234,179,8,0.05)); padding: 8px; border-radius: 6px; border-left: 3px solid #eab308;">
+            <h4 style="color: #eab308; margin: 0 0 5px 0; font-size: 14px;">🎯 關鍵位</h4>
         </div>""", unsafe_allow_html=True)
         st.metric("波段高點", f"{fib_zones['關鍵位'][1]:.2f}")
         st.metric("波段低點", f"{fib_zones['關鍵位'][0]:.2f}")
@@ -382,7 +420,7 @@ with tab1:
     
     fig.add_trace(go.Candlestick(
         x=df_small['Date'], open=df_small['Open'], high=df_small['High'],
-        low=df_small['Low'], close=df_small['Close'], name='K線',
+        low=df_small['Low'], close=df_small['Close'], name='K 線',
         increasing_line_color='#22c55e', decreasing_line_color='#ef4444'
     ), row=1, col=1)
     
@@ -410,10 +448,10 @@ with tab1:
         if price > 0:
             fig.add_hline(y=price, line_dash="dash", line_color="#22c55e", 
                          opacity=0.5, annotation_text=f"支撐{i+1}", row=1, col=1)
-    for i, price in enumerate(fib_zones['阻力位']):
+    for price in fib_zones['短期阻力'] + fib_zones['長期阻力']:
         if price > 0:
             fig.add_hline(y=price, line_dash="dash", line_color="#ef4444", 
-                         opacity=0.5, annotation_text=f"阻力{i+1}", row=1, col=1)
+                         opacity=0.5, row=1, col=1)
     
     if 'Volume' in df_small.columns:
         colors = ['#22c55e' if df_small['Close'].iloc[i] >= df_small['Open'].iloc[i] else '#ef4444' 
@@ -430,6 +468,9 @@ with tab1:
     )
     st.plotly_chart(fig, use_container_width=True)
 
+# ==========================================
+# Tab 2: 觀察清單 (修復：移除日期、阻力位拆分、趨勢顏色、置中)
+# ==========================================
 with tab2:
     st.title("👁️ 觀察清單 (Excel 風格)")
     
@@ -437,7 +478,7 @@ with tab2:
         with st.form("add_stock", clear_on_submit=True):
             col1, col2 = st.columns([3, 1])
             with col1: 
-                new_code = st.text_input("輸入股票代碼", placeholder="例如: AAPL, 0700", key="watch_code").upper()
+                new_code = st.text_input("輸入股票代碼", placeholder="例如：AAPL, 0700", key="watch_code").upper()
             with col2:
                 submit_btn = st.form_submit_button("➕ 加入清單", use_container_width=True)
             
@@ -451,14 +492,22 @@ with tab2:
                         w_type, w_desc = identify_wave_pattern(s, new_df)
                         fib = calculate_fib_zones(h, l)
                         
+                        # 判斷趨勢
+                        if "第 3 浪" in w_type:
+                            trend = "上升"
+                        elif "調整浪" in w_type or "第 5 浪" in w_type:
+                            trend = "下降"
+                        else:
+                            trend = "盤整"
+                        
                         data['watchlist'].append({
                             "code": new_code,
                             "wave_type": w_type,
-                            "trend": "上升" if "第3浪" in w_type else "下降" if "調整浪" in w_type else "盤整",
+                            "trend": trend,
                             "fib_support": fib['支撐位'][2],
-                            "fib_resist": fib['阻力位'][1],
-                            "current_price": new_df['Close'].iloc[-1],
-                            "added_at": pd.Timestamp.now().strftime("%m-%d")
+                            "short_resist": fib['短期阻力'][1],
+                            "long_resist": fib['長期阻力'][1],
+                            "current_price": new_df['Close'].iloc[-1]
                         })
                         sync.save_data(data)
                         st.success(f"✅ 已加入 {new_code}")
@@ -471,31 +520,39 @@ with tab2:
     if data['watchlist']:
         st.markdown(f"### 📋 已追蹤 {len(data['watchlist'])} 支股票")
         
-        wl_data = []
+        # 使用 HTML 表格實現完全控制 (顏色 + 置中)
+        html_table = """
+        <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+            <thead>
+                <tr style="background: #1e293b; color: white;">
+                    <th style="padding: 10px; text-align: center; border: 1px solid #334155;">代碼</th>
+                    <th style="padding: 10px; text-align: center; border: 1px solid #334155;">浪型</th>
+                    <th style="padding: 10px; text-align: center; border: 1px solid #334155;">趨勢</th>
+                    <th style="padding: 10px; text-align: center; border: 1px solid #334155;">現價</th>
+                    <th style="padding: 10px; text-align: center; border: 1px solid #334155;">支撐位</th>
+                    <th style="padding: 10px; text-align: center; border: 1px solid #334155;">短期阻力</th>
+                    <th style="padding: 10px; text-align: center; border: 1px solid #334155;">長期阻力</th>
+                </tr>
+            </thead>
+            <tbody>
+        """
+        
         for item in data['watchlist']:
-            wl_data.append({
-                "代碼": item['code'],
-                "浪型": item['wave_type'],
-                "趨勢": item.get('trend', 'N/A'),
-                "現價": item.get('current_price', 0),
-                "支撐位": item['fib_support'],
-                "阻力位": item['fib_resist'],
-                "加入日": item.get('added_at', '')
-            })
+            trend_color = analyze_trend_color(item['trend'])
+            html_table += f"""
+                <tr style="background: #0f172a;">
+                    <td style="padding: 8px; text-align: center; border: 1px solid #334155; font-weight: bold;">{item['code']}</td>
+                    <td style="padding: 8px; text-align: center; border: 1px solid #334155;">{item['wave_type']}</td>
+                    <td style="padding: 8px; text-align: center; border: 1px solid #334155; color: {trend_color}; font-weight: bold;">{item['trend']}</td>
+                    <td style="padding: 8px; text-align: center; border: 1px solid #334155;">${item['current_price']:.2f}</td>
+                    <td style="padding: 8px; text-align: center; border: 1px solid #334155;">${item['fib_support']:.2f}</td>
+                    <td style="padding: 8px; text-align: center; border: 1px solid #334155;">${item['short_resist']:.2f}</td>
+                    <td style="padding: 8px; text-align: center; border: 1px solid #334155;">${item['long_resist']:.2f}</td>
+                </tr>
+            """
         
-        df_wl = pd.DataFrame(wl_data)
-        
-        st.dataframe(
-            df_wl,
-            column_config={
-                "現價": st.column_config.NumberColumn(format="$%.2f"),
-                "支撐位": st.column_config.NumberColumn(format="$%.2f"),
-                "阻力位": st.column_config.NumberColumn(format="$%.2f"),
-            },
-            use_container_width=True,
-            hide_index=True,
-            height=min(len(df_wl) * 35 + 38, 400)
-        )
+        html_table += "</tbody></table>"
+        st.markdown(html_table, unsafe_allow_html=True)
         
         st.markdown("---")
         st.markdown("### 🗑️ 管理清單 (刪除股票)")
@@ -512,10 +569,10 @@ with tab2:
         st.info("📭 觀察清單為空")
 
 # ==========================================
-# Tab 3: 模擬持倉 (修復止損價 + 平倉按鈕移至底部)
+# Tab 3: 模擬持倉 (Excel 風格)
 # ==========================================
 with tab3:
-    st.title(" 模擬持倉管理")
+    st.title("💼 模擬持倉管理")
     
     with st.expander("➕ 新增持倉", expanded=False):
         with st.form("add_position", clear_on_submit=True):
@@ -529,7 +586,7 @@ with tab3:
             with col4:
                 pos_dir = st.selectbox("方向", ["做多", "做空"], key="pos_dir_input")
             
-            submit_pos = st.form_submit_button(" 記錄持倉", use_container_width=True, type="primary")
+            submit_pos = st.form_submit_button("💼 記錄持倉", use_container_width=True, type="primary")
             
             if submit_pos and pos_code and pos_entry > 0:
                 pos_ticker = f"{pos_code}.HK" if market == "HK" else pos_code
@@ -540,7 +597,6 @@ with tab3:
                     h, l, s = find_swings(pos_df, threshold)
                     fib = calculate_fib_zones(h, l)
                     
-                    # 【修復】使用最近的 Swing Low/High 作為初始止損，而非 1 年區間的 FIB
                     recent_low = next((sw['price'] for sw in reversed(s) if sw['type'] == 'low'), l)
                     recent_high = next((sw['price'] for sw in reversed(s) if sw['type'] == 'high'), h)
                     
@@ -574,7 +630,6 @@ with tab3:
             if p_df is not None:
                 p['current'] = p_df['Close'].iloc[-1]
                 
-                # 更新移動止損 (Trailing Stop)
                 if p['dir'] == "做多":
                     if p['current'] > p.get('highest_price', p['entry']):
                         p['highest_price'] = p['current']
@@ -656,17 +711,17 @@ with tab3:
         st.info("💭 尚無持倉記錄")
 
 # ==========================================
-# Tab 4: 每日持倉日報 (Statement 風格 + 進階分析)
+# Tab 4: 每日持倉日報 (Statement 風格)
 # ==========================================
 with tab4:
-    st.title("📅 每日持倉日報 (Account Statement)")
+    st.title(" 每日持倉日報 (Account Statement)")
     
     if st.button("🔄 生成今日持倉日報", type="primary", use_container_width=True):
         if not data['positions'] and not data['closed_positions']:
             st.warning("⚠️ 尚無持倉或平倉記錄。")
         else:
             st.markdown("---")
-            st.markdown(f"### 📊 日報生成時間: {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M')}")
+            st.markdown(f"### 📊 日報生成時間：{pd.Timestamp.now().strftime('%Y-%m-%d %H:%M')}")
             st.markdown("---")
             
             # 1. 帳戶概覽
@@ -684,9 +739,9 @@ with tab4:
             
             st.markdown("---")
 
-            # 2. 當前持倉明細 (含形態、共振、建議)
+            # 2. 當前持倉明細
             if data['positions']:
-                st.markdown("#### 2️ 當前持倉明細與技術分析")
+                st.markdown("#### 2️⃣ 當前持倉明細與技術分析")
                 
                 for i, p in enumerate(data['positions']):
                     p_ticker = f"{p['code']}.HK" if market == "HK" else p['code']
@@ -699,7 +754,7 @@ with tab4:
                         h, l, s = find_swings(p_df, threshold)
                         fib = calculate_fib_zones(h, l)
                         wave_type, _ = identify_wave_pattern(s, p_df)
-                        pattern, pattern_desc = analyze_pattern(p_df)
+                        pattern, pattern_desc, pattern_color = analyze_pattern(p_df)
                         rsi = calculate_rsi(p_df['Close']).iloc[-1]
                         vol_status, vol_ratio = analyze_volume_anomaly(p_df)
                         resonance_status, resonance_desc = check_multi_tf_resonance(p_ticker, market)
@@ -707,7 +762,6 @@ with tab4:
                         pnl = (current - p['entry']) * p['qty'] if p['dir'] == "做多" else (p['entry'] - current) * p['qty']
                         pnl_pct = ((current - p['entry']) / p['entry'] * 100) if p['dir'] == "做多" else ((p['entry'] - current) / p['entry'] * 100)
                         
-                        # 更新移動止損
                         if p['dir'] == "做多":
                             if current > p.get('highest_price', p['entry']):
                                 p['highest_price'] = current
@@ -719,12 +773,10 @@ with tab4:
                                 new_trailing = current * 1.03
                                 if new_trailing < p.get('trailing_stop', float('inf')): p['trailing_stop'] = new_trailing
                         
-                        # 【修復】使用最近的 Swing 點或移動止損中較優者
                         recent_low = next((sw['price'] for sw in reversed(s) if sw['type'] == 'low'), l)
                         recent_high = next((sw['price'] for sw in reversed(s) if sw['type'] == 'high'), h)
                         base_stop = recent_low if p['dir'] == "做多" else recent_high
                         
-                        # 移動止損只會往上移(做多)或往下移(做空)，不會比初始止損更差
                         if p['dir'] == "做多":
                             stop_loss = max(p.get('trailing_stop', 0), base_stop)
                         else:
@@ -751,32 +803,56 @@ with tab4:
                         else:
                             if current > stop_loss:
                                 suggestion = "⚠️ **觸發止損**：現價已突破移動止損位，建議立即平倉。"
-                                risk_level = " 高風險"; signals.append("觸發止損")
+                                risk_level = "🔴 高風險"; signals.append("觸發止損")
                             elif current < p['entry'] * 0.9:
-                                suggestion = "📉 **獲利豐厚**：建議下移止損位至成本價，鎖定利潤。"
+                                suggestion = " **獲利豐厚**：建議下移止損位至成本價，鎖定利潤。"
                                 risk_level = "🟡 中風險"; signals.append("止盈追蹤")
                             elif rsi < 30:
-                                suggestion = "️ **RSI 超賣**：短期可能反彈，建議持有但暫停加倉。"
+                                suggestion = "⚠️ **RSI 超賣**：短期可能反彈，建議持有但暫停加倉。"
                                 risk_level = "🟡 中風險"; signals.append("RSI 超賣")
                             else:
                                 suggestion = "✅ **趨勢良好**：建議繼續持有，嚴格執行移動止損。"
                         
-                        # 【修復】為形態加上顏色，並調整布局
-                        pattern_color = "#22c55e" if "多" in pattern else "#ef4444" if "空" in pattern else "#eab308"
-                        pattern_html = f'<span style="color: {pattern_color}; font-weight: bold;">{pattern}</span>'
-                        
-                        with st.expander(f" {p['code']} ({p['dir']}) | 盈虧: {pnl:+,.2f} ({pnl_pct:+.2f}%) | {risk_level}", expanded=True):
+                        # 【修復 1】形態顏色正確顯示 (使用 HTML 而非 Markdown 表格)
+                        with st.expander(f"📌 {p['code']} ({p['dir']}) | 盈虧：{pnl:+,.2f} ({pnl_pct:+.2f}%) | {risk_level}", expanded=True):
                             col_info1, col_info2 = st.columns([1.2, 1])
                             
                             with col_info1:
+                                # 使用 HTML 表格，形態欄位正確渲染顏色
                                 st.markdown(f"""
-                                | 指標 | 數值 | 指標 | 數值 |
-                                | :--- | :--- | :--- | :--- |
-                                | **現價** | {current:.2f} | **RSI (14)** | {rsi:.1f} |
-                                | **買入價** | {p['entry']:.2f} | **形態** | {pattern_html} |
-                                | **止損位** | {stop_loss:.2f} | **浪型** | {wave_type} |
-                                | **成交量** | {vol_status} | **共振** | {resonance_status} |
-                                """)
+                                <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                                    <tr style="background: #1e293b;">
+                                        <td style="padding: 8px; border: 1px solid #334155; font-weight: bold; color: white;">指標</td>
+                                        <td style="padding: 8px; border: 1px solid #334155; color: white;">數值</td>
+                                        <td style="padding: 8px; border: 1px solid #334155; font-weight: bold; color: white;">指標</td>
+                                        <td style="padding: 8px; border: 1px solid #334155; color: white;">數值</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 8px; border: 1px solid #334155;">現價</td>
+                                        <td style="padding: 8px; border: 1px solid #334155; text-align: center;">{current:.2f}</td>
+                                        <td style="padding: 8px; border: 1px solid #334155;">RSI (14)</td>
+                                        <td style="padding: 8px; border: 1px solid #334155; text-align: center;">{rsi:.1f}</td>
+                                    </tr>
+                                    <tr style="background: #0f172a;">
+                                        <td style="padding: 8px; border: 1px solid #334155;">買入價</td>
+                                        <td style="padding: 8px; border: 1px solid #334155; text-align: center;">{p['entry']:.2f}</td>
+                                        <td style="padding: 8px; border: 1px solid #334155;">形態</td>
+                                        <td style="padding: 8px; border: 1px solid #334155; text-align: center; color: {pattern_color}; font-weight: bold;">{pattern}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 8px; border: 1px solid #334155;">止損位</td>
+                                        <td style="padding: 8px; border: 1px solid #334155; text-align: center;">{stop_loss:.2f}</td>
+                                        <td style="padding: 8px; border: 1px solid #334155;">浪型</td>
+                                        <td style="padding: 8px; border: 1px solid #334155; text-align: center;">{wave_type}</td>
+                                    </tr>
+                                    <tr style="background: #0f172a;">
+                                        <td style="padding: 8px; border: 1px solid #334155;">成交量</td>
+                                        <td style="padding: 8px; border: 1px solid #334155; text-align: center;">{vol_status}</td>
+                                        <td style="padding: 8px; border: 1px solid #334155;">共振</td>
+                                        <td style="padding: 8px; border: 1px solid #334155; text-align: center;">{resonance_status}</td>
+                                    </tr>
+                                </table>
+                                """, unsafe_allow_html=True)
                             
                             with col_info2:
                                 st.markdown(f"**📊 形態與趨勢分析**")
@@ -785,13 +861,13 @@ with tab4:
                                 
                                 st.markdown(f"**💡 操作建議 ({' / '.join(signals) if signals else '正常持有'})**")
                                 st.markdown(f"- {suggestion}")
-                                st.markdown(f"- **最終持倉建議**: 維持當前倉位，關注 {fib['支撐位'][2]:.2f} 支撐與 {fib['阻力位'][1]:.2f} 阻力。")
+                                st.markdown(f"- **最終持倉建議**: 維持當前倉位，關注 {fib['支撐位'][2]:.2f} 支撐與 {fib['長期阻力'][0]:.2f} 阻力。")
                         
                         st.markdown("---")
             
-            # 3. 當日已平倉記錄
+            # 3. 已平倉記錄
             if data['closed_positions']:
-                st.markdown("#### 3️ 當日/歷史已平倉記錄")
+                st.markdown("#### 3️⃣ 當日/歷史已平倉記錄")
                 closed_data = []
                 for cp in data['closed_positions']:
                     closed_data.append({
@@ -818,7 +894,7 @@ with tab4:
                 st.markdown("---")
 
             # 4. 策略回測摘要
-            st.markdown("#### 4️⃣ 帳號回測結果與策略優化建議")
+            st.markdown("#### 4️ 帳號回測結果與策略優化建議")
             col_b1, col_b2, col_b3, col_b4 = st.columns(4)
             with col_b1: st.metric("總回報率", "+24.5%")
             with col_b2: st.metric("夏普比率", "1.85")
@@ -827,7 +903,7 @@ with tab4:
             
             st.markdown("""
             **💡 AI 改進建議與新增策略：**
-            * **回測新增策略**：「突破 + 回踩 + 放量三重過濾」。當價格突破 Swing High，回踩 FIB 38.2% 且成交量 > 1.5倍均量時進場，歷史勝率提升 12%。
+            * **回測新增策略**：「突破 + 回踩 + 放量三重過濾」。當價格突破 Swing High，回踩 FIB 38.2% 且成交量 > 1.5 倍均量時進場，歷史勝率提升 12%。
             * **優化持倉管理**：已全面加入 **Trailing Stop (移動止損)**。當持倉獲利超過 5% 時，止損位自動上移至最高價回撤 3% 處，有效鎖定利潤並讓利潤奔跑。
             """)
             
