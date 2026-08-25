@@ -519,6 +519,15 @@
       "fib_resist": 185.0500030517578,
       "current_price": 62.20000076293945,
       "added_at": "2026-08-25 07:38"
+    },
+    {
+      "code": "1378.HK",
+      "wave_type": "第3浪 (主升段)",
+      "trend": "上升",
+      "fib_support": 27.049569311867046,
+      "fib_resist": 58.73005004583378,
+      "current_price": 23.479999542236328,
+      "added_at": "08-25"
     }
   ],
   "positions": [
