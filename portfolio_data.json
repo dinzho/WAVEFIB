@@ -537,6 +537,15 @@
       "fib_resist": 3.0363433624599026,
       "current_price": 1.6749999523162842,
       "added_at": "08-25"
+    },
+    {
+      "code": "9988.HK",
+      "wave_type": "第2/4浪 (回調)",
+      "trend": "盤整",
+      "fib_support": 125.83437381558835,
+      "fib_resist": 283.3325789589126,
+      "current_price": 114.19999694824219,
+      "added_at": "08-25"
     }
   ],
   "positions": [
