@@ -625,6 +625,15 @@
       "added_at": "08-25",
       "short_resist": 67.7098927327264,
       "long_resist": 71.09538736936273
+    },
+    {
+      "code": "META",
+      "wave_type": "调整浪 (ABC)",
+      "trend": "下降",
+      "fib_support": 622.3216866325868,
+      "short_resist": 954.1114472805382,
+      "long_resist": 1222.5497649568745,
+      "current_price": 562.8900146484375
     }
   ],
   "positions": [
