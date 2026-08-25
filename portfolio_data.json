@@ -555,6 +555,15 @@
       "fib_resist": 1187.3042703508763,
       "current_price": 621.0,
       "added_at": "08-25"
+    },
+    {
+      "code": "0992.HK",
+      "wave_type": "第3浪 (主升段)",
+      "trend": "上升",
+      "fib_support": 19.0079542577204,
+      "fib_resist": 63.914118924583164,
+      "current_price": 30.799999237060547,
+      "added_at": "08-25"
     }
   ],
   "positions": [
